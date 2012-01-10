@@ -1,0 +1,255 @@
+<project name="nanosql" default="full" basedir=".">
+    <description>
+    NanoDB - Donnie's Baby Relational Database
+
+    Default build properties are for a debug build.  These properties are set
+    up by the "debug" target, which is a dependency of the "compile" target.
+
+    To override and build a release build, run "ant release ..." where "..."
+    is the desired build target, e.g. "compile" or "test" or "jar".
+    </description>
+
+    <!-- Global Properties -->
+
+    <property name="srcDir"  location="src"/>
+    <property name="libDir"  location="lib"/>
+    <property name="resDir"  location="res"/>
+
+    <property name="findbugsHomeDir" location="findbugs-2.0.0" />
+    <property name="findbugsLibDir"  location="${findbugsHomeDir}/lib" />
+
+    <!--
+      Relative path to SQL parser code (and in Javadocs, it's the relative path
+      to the docs for the classes).
+      -->
+    <property name="sqlParserRelDir" value="edu/caltech/nanodb/sqlparse" />
+    <property name="sqlParserDir" location="${srcDir}/${sqlParserRelDir}" />
+    <property name="sqlParserDocDir" location="${sqlParserDir}/doc" />
+
+    <property name="buildDir" location="build" />
+    <property name="buildClassesDir" location="${buildDir}/classes" />
+    <property name="buildResDir"     location="${buildDir}/res" />
+
+    <property name="javaDocDir" location="${buildDir}/javadoc" />
+    <property name="javaDocSqlParserDocDir" location="${javaDocDir}/${sqlParserRelDir}/doc" />
+
+    <property name="testSrcDir" location="test" />
+    <property name="testBuildDir" location="${buildDir}/tests" />
+    <property name="testResultsDir" location="${buildDir}/results" />
+
+    <!-- This is the temporary directory that storage-related test cases use. -->
+    <property name="testTempDir" location="test_datafiles" />
+
+    <property name="distJarFile" value="nanodb.jar" />
+    <property name="mainClassName" value="edu.caltech.nanodb.client.ExclusiveClient" />
+
+    <!-- Library Paths -->
+
+    <path id="libs.path">
+        <fileset dir="${libDir}">
+            <include name="antlr-3.2.jar" />
+            <include name="log4j-1.2.13.jar" />
+            <include name="bsh-2.0b4.jar" />
+            <include name="commons-lang-2.4.jar" />
+        </fileset>
+    </path>
+
+    <path id="test.path">
+        <path refid="libs.path" />
+
+        <pathelement location="${buildClassesDir}" />
+        <fileset dir="${libDir}">
+            <include name="testng-5.8-jdk15.jar" />
+        </fileset>
+    </path>
+    
+    <path id="findbugs.path">
+        <path refid="libs.path" />
+
+        <fileset dir="${findbugsLibDir}">
+            <include name="findbugs.jar" />
+            <include name="findbugs-ant.jar" />
+        </fileset>
+    </path>
+
+    <!-- Custom Task Definitions -->
+
+    <taskdef resource="testngtasks" classpathref="test.path" />
+
+    <taskdef name="findbugs" classname="edu.umd.cs.findbugs.anttask.FindBugsTask"
+             classpathref="findbugs.path" />
+
+    <!-- Build Tasks -->
+
+    <target name="full" depends="test,jar,javadoc"
+            description="Runs test, jar, and javadoc targets in that order." />
+
+    <target name="-init">
+        <tstamp/>
+        <mkdir dir="${buildDir}" />
+    </target>
+
+    <target name="debug"
+            description="Set properties for a debug build.">
+        <property name="java.debug" value="on" />
+        <property name="java.opt"   value="off" />
+    </target>
+
+    <target name="release"
+          description="Set properties for a release build.">
+        <property name="java.debug" value="off" />
+        <property name="java.opt"   value="on" />
+    </target>
+
+
+    <target name="clean-parser"
+            description="Deletes the generated parser files.">
+
+        <property name="sqlParserDir"
+                  location="${srcDir}/edu/caltech/nanodb/sqlparse" />
+
+        <delete>
+            <fileset dir="${sqlParserDir}">
+                <include name="NanoSqlLexer.java" />
+                <include name="NanoSqlParser.java" />
+                <include name="NanoSqlParserTokenTypes.java" />
+                <include name="*.smap" />
+                <include name="NanoSqlParserTokenTypes.txt" />
+
+                <include name="doc" />
+            </fileset>
+        </delete>
+    </target>
+
+
+    <target name="gen-parser"
+            description="Generates the Java source code for the SQL parser.">
+        <!--
+          HACK HACK HACK
+
+          Antlr doesn't really put things into the right directories for Java
+          package declarations.  So we do the extra legwork.  Unfortunately it
+          means we have to keep this in sync with the codebase, which isn't good.
+          -->
+
+        <!-- Generate the SQL parser and lexer sources. -->
+        <antlr target="${resDir}/nanosql.g" outputdirectory="${sqlParserDir}">
+            <classpath>
+                <path refid="libs.path" />
+            </classpath>
+        </antlr>
+
+        <!-- Generate HTML files describing the grammar. -->
+        <mkdir dir="${sqlParserDocDir}" />
+        <antlr target="${resDir}/nanosql.g" outputdirectory="${sqlParserDocDir}" html="yes">
+            <classpath>
+                <path refid="libs.path" />
+            </classpath>
+        </antlr>
+    </target>
+
+    <target name="compile" depends="debug,-init"
+            description="compile the source">
+
+        <mkdir dir="${buildClassesDir}" />
+
+        <javac destdir="${buildClassesDir}" classpathref="libs.path"
+               source="1.6" target="1.6" includeantruntime="no"
+               debug="${java.debug}" optimize="${java.opt}" deprecation="on">
+
+            <compilerarg value="-Xlint:unchecked,cast" />
+
+            <src path="${srcDir}" />
+        </javac>
+    </target>
+
+
+    <target name="compiletests" depends="compile">
+        <mkdir dir="${testBuildDir}" />
+
+        <javac destdir="${testBuildDir}" classpathref="test.path"
+               source="1.6" target="1.6" includeantruntime="no"
+               debug="on" optimize="off" deprecation="on">
+
+            <src path="${testSrcDir}" />
+        </javac>
+    </target>
+
+
+    <target name="test" depends="compiletests">
+        <delete dir="${testTempDir}" />
+        <mkdir dir="${testResultsDir}" />
+
+        <testng suitename="nanodb-tests" outputdir="${testResultsDir}">
+            <classpath>
+                <pathelement path="${testBuildDir}" />
+                <path refid="test.path" />
+            </classpath>
+
+            <classfileset dir="${testBuildDir}" includes="**/Test*.class" />
+        </testng>
+    </target>
+
+
+    <target name="jar" depends="compile"
+          description="Create a distribution jar-file.">
+
+        <!-- Put all of the classes into an appropriately-named JAR file. -->
+        <jar jarfile="${buildDir}/${distJarFile}" basedir="${buildClassesDir}">
+            <manifest>
+                <attribute name="Main-Class" value="${mainClassName}" />
+            </manifest>
+        </jar>
+    </target>
+
+
+    <target name="javadoc" depends="-init" description="Generate JavaDocs.">
+        <mkdir dir="${javaDocDir}" />
+
+        <javadoc packagenames="*" destdir="${javaDocDir}" classpathref="libs.path"
+                 windowtitle="NanoDB" overview="${srcDir}/overview.html"
+                 access="private" useexternalfile="yes">
+
+            <sourcepath>
+                <pathelement location="${srcDir}" />
+            </sourcepath>
+
+            <tag name="design" scope="all" description="Design note:" />
+            <tag name="review" scope="all" description="Review:" />
+            <tag name="todo" scope="all" description="To Do:" />
+
+            <link href="http://download.oracle.com/javase/6/docs/api/"
+                  offline="true" packagelistLoc="${resDir}/jdk" />
+
+            <link href="http://logging.apache.org/log4j/1.2/apidocs/"
+                  offline="true" packagelistloc="${resDir}/log4j" />
+        </javadoc>
+
+        <copy todir="${javaDocSqlParserDocDir}">
+            <fileset dir="${sqlParserDocDir}" includes="*" />
+        </copy>
+    </target>
+
+    <target name="clean" description="Clean up all build artifacts.">
+        <delete dir="${buildDir}"/>
+    </target>
+
+
+    <target name="findbugs" depends="jar"
+            description="Run FindBugs static code-analysis tool">
+        <findbugs home="${findbugsHomeDir}" effort="max"
+                  output="html" outputFile="${buildDir}/nanodb-fb.html"
+                  excludefilter="fb-excl.xml">
+            <auxclasspath>
+                <fileset dir="${libDir}">
+                    <include name="antlr-3.2.jar" />
+                    <include name="log4j-1.2.13.jar" />
+                    <include name="commons-lang-2.4.jar" />
+                </fileset>
+            </auxclasspath>
+
+            <sourcepath path="${srcDir}" />
+            <class location="${buildDir}/${distJarFile}" />
+        </findbugs>
+    </target>
+</project>

@@ -175,9 +175,24 @@ public class HeapFileTableManager implements TableManager {
         logger.debug("Table " + tableName + " schema uses " + schemaSize +
             " bytes of the " + dbFile.getPageSize() + "-byte header page.");
 
-        // Write in empty statistics, so that the values are at least
-        // initialized to something.
-        TableStats stats = new TableStats(schema.numColumns());
+        // Write in table stats (empty with the exception of minTupleSize and
+        // maxTupleSize, which don't change).
+        int minTupleSize = 1;
+        int maxTupleSize = 1;
+        for (ColumnInfo column : schema.getColumnInfos()) {
+            if (column.getType().hasLength())
+            {
+            	maxTupleSize += PageTuple.getStorageSize(column.getType(), 
+            			column.getType().getLength());
+            }
+            else
+            {
+            	maxTupleSize += PageTuple.getStorageSize(column.getType(), 0);
+            }
+            minTupleSize += PageTuple.getStorageSize(column.getType(), 0);
+        }
+        TableStats stats = new TableStats(minTupleSize, maxTupleSize, 
+        		schema.numColumns());
         tblFileInfo.setStats(stats);
         HeaderPage.setTableStats(headerPage, tblFileInfo);
     }

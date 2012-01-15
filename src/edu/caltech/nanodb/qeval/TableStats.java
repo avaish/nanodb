@@ -88,7 +88,26 @@ public class TableStats {
         for (int i = 0; i < numColumns; i++)
             columnStats.add(new ColumnStats());
     }
+    
+    /**
+     * Create a new table-statistics object with all statistics initialized to
+     * zero, except minTupleSize and maxTupleSize.
+     * 
+     * @param minTupleSize the minimum tuple-size in bytes
+     * @param maxTupleSize the maximum tuple-size in bytes
+     * @param numColumns the number of columns in the table
+     */
+    public TableStats(int minTupleSize, int maxTupleSize, int numColumns) {
+        numDataPages = 0;
+        numTuples = 0;
+        avgTupleSize = 0;
+        this.minTupleSize = minTupleSize;
+        this.maxTupleSize = maxTupleSize;
 
+        columnStats = new ArrayList<ColumnStats>(numColumns);
+        for (int i = 0; i < numColumns; i++)
+            columnStats.add(new ColumnStats());
+    }
 
     /**
      * Returns the column-statistics for the specified column.

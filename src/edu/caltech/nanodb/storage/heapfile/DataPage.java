@@ -4,6 +4,8 @@ package edu.caltech.nanodb.storage.heapfile;
 import org.apache.log4j.Logger;
 
 import edu.caltech.nanodb.storage.DBPage;
+import edu.caltech.nanodb.storage.PageReader;
+import edu.caltech.nanodb.storage.PageWriter;
 
 
 /**
@@ -210,14 +212,44 @@ public class DataPage {
      * This static helper function returns the index of where tuple data
      * currently ends in the specified data page.  This value depends more on
      * the overall structure of the data page, and at present is simply the
-     * page-size.
+     * page-size, minus 4 bytes for the pointer to the next free page.
      *
      * @param dbPage the data page to examine
      *
      * @return the index where the tuple data ends in this data page
      */
     public static int getTupleDataEnd(DBPage dbPage) {
-        return dbPage.getPageSize();
+        return dbPage.getPageSize() - 4;
+    }
+    
+    
+    /**
+     * This static helper function writes the pointer to the next free page 
+     * in the storage heap.
+     * 
+     * @param dbPage the data page to write to
+     * @param pointer the pointer to set
+     */
+    public static void setPointer(DBPage dbPage, int pointer) {
+    	PageWriter pageWriter = new PageWriter(dbPage);
+    	pageWriter.setPosition(dbPage.getPageSize() - 4);
+        pageWriter.writeInt(pointer);
+        logger.debug("Created pointer to page " + pointer + ".");
+    }
+    
+    
+    /**
+     * This static helper function reads the pointer to the next free page 
+     * in the storage heap.
+     * 
+     * @param dbPage the data page to write to
+     * 
+     * @return the pointer to the next page
+     */
+    public static int getPointer(DBPage dbPage) {
+    	PageReader pageReader = new PageReader(dbPage);
+    	pageReader.setPosition(dbPage.getPageSize() - 4);
+        return pageReader.readInt();
     }
 
 

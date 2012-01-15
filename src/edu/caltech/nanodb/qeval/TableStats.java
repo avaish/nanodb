@@ -26,7 +26,16 @@ public class TableStats {
      * a float, and usually includes a fractional part.
      */
     public float avgTupleSize;
-
+    
+    /**
+     * The minimum number of bytes in tuples in this table file.
+     */
+    public int minTupleSize;
+    
+    /**
+     * The maximum number of bytes in tuples in this table file.
+     */
+    public int maxTupleSize;
 
     /**
      * This collection holds statistics about individual columns in the table.
@@ -42,9 +51,12 @@ public class TableStats {
      * @param numDataPages the number of data pages in the table file
      * @param numTuples the number of tuples in the table file
      * @param avgTupleSize the average tuple-size in bytes
+     * @param minTupleSize the minimum tuple-size in bytes
+     * @param maxTupleSize the maximum tuple-size in bytes
      * @param columnStats an array of column-statistics generated from the table
      */
     public TableStats(int numDataPages, int numTuples, float avgTupleSize,
+                      int minTupleSize, int maxTupleSize, 
                       ArrayList<ColumnStats> columnStats) {
         if (columnStats == null)
             throw new IllegalArgumentException("columnStats cannot be null");
@@ -52,6 +64,8 @@ public class TableStats {
         this.numDataPages = numDataPages;
         this.numTuples = numTuples;
         this.avgTupleSize = avgTupleSize;
+        this.maxTupleSize = maxTupleSize;
+        this.minTupleSize = minTupleSize;
 
         this.columnStats = columnStats;
     }
@@ -67,6 +81,8 @@ public class TableStats {
         numDataPages = 0;
         numTuples = 0;
         avgTupleSize = 0;
+        minTupleSize = 0;
+        maxTupleSize = 0;
 
         columnStats = new ArrayList<ColumnStats>(numColumns);
         for (int i = 0; i < numColumns; i++)
@@ -99,6 +115,8 @@ public class TableStats {
     @Override
     public String toString() {
       return "TableStats[numDataPages=" + numDataPages + ", numTuples=" +
-        numTuples + ", avgTupleSize=" + avgTupleSize + "]";
+        numTuples + ", avgTupleSize=" + avgTupleSize + 
+        ", minTupleSize=" + minTupleSize + ", maxTupleSize=" + 
+        maxTupleSize + "]";
     }
 }

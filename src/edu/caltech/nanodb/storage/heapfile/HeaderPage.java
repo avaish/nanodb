@@ -121,7 +121,24 @@ public class HeaderPage {
      * @see #getStatsOffset
      */
     public static final int RELOFF_AVG_TUPLE_SIZE = 6;
-
+    
+    /**
+     * This is the <em>relative</em> offset of the maximum tuple-size in the
+     * data file, relative to the start of the table statistics.  This value is
+     * an integer (4 bytes).
+     *
+     * @see #getStatsOffset
+     */
+    public static final int RELOFF_MIN_TUPLE_SIZE = 10;
+    
+    /**
+     * This is the <em>relative</em> offset of the maximum tuple-size in the
+     * data file, relative to the start of the table statistics.  This value is
+     * an integer (4 bytes).
+     *
+     * @see #getStatsOffset
+     */
+    public static final int RELOFF_MAX_TUPLE_SIZE = 14;
 
     /**
      * This is the <em>relative</em> offset of the column statistics in the
@@ -132,7 +149,7 @@ public class HeaderPage {
      *
      * @see #getStatsOffset
      */
-    public static final int RELOFF_COLUMN_STATS = 10;
+    public static final int RELOFF_COLUMN_STATS = 18;
 
 
     /**
@@ -346,7 +363,61 @@ public class HeaderPage {
         int offset = getStatsOffset(dbPage) + RELOFF_AVG_TUPLE_SIZE;
         return dbPage.readFloat(offset);
     }
+    
+    
+    /**
+     * Updates the "minimum tuple size" statistic for this heap file.
+     *
+     * @param dbPage the header page of the heap file.
+     * @param avgTupleSize the "minimum tuple size" value to store.
+     */
+    public static void setStatMinTupleSize(DBPage dbPage, int minTupleSize) {
+        verifyIsHeaderPage(dbPage);
 
+        int offset = getStatsOffset(dbPage) + RELOFF_MIN_TUPLE_SIZE;
+        dbPage.writeInt(offset, minTupleSize);
+    }
+
+
+    /**
+     * Returns the "minimum tuple size" statistic for this heap file.
+     *
+     * @param dbPage the header page of the heap file.
+     * @return the "minimum tuple size" value to store.
+     */
+    public static int getStatMinTupleSize(DBPage dbPage) {
+        verifyIsHeaderPage(dbPage);
+
+        int offset = getStatsOffset(dbPage) + RELOFF_MIN_TUPLE_SIZE;
+        return dbPage.readInt(offset);
+    }
+    
+    /**
+     * Updates the "maximum tuple size" statistic for this heap file.
+     *
+     * @param dbPage the header page of the heap file.
+     * @param avgTupleSize the "maximum tuple size" value to store.
+     */
+    public static void setStatMaxTupleSize(DBPage dbPage, int maxTupleSize) {
+        verifyIsHeaderPage(dbPage);
+
+        int offset = getStatsOffset(dbPage) + RELOFF_MAX_TUPLE_SIZE;
+        dbPage.writeInt(offset, maxTupleSize);
+    }
+
+
+    /**
+     * Returns the "maximum tuple size" statistic for this heap file.
+     *
+     * @param dbPage the header page of the heap file.
+     * @return the "maximum tuple size" value to store.
+     */
+    public static int getStatMaxTupleSize(DBPage dbPage) {
+        verifyIsHeaderPage(dbPage);
+
+        int offset = getStatsOffset(dbPage) + RELOFF_MAX_TUPLE_SIZE;
+        return dbPage.readInt(offset);
+    }
 
     public static TableStats getTableStats(DBPage dbPage,
                                            TableFileInfo tblFileInfo) {
@@ -389,7 +460,8 @@ public class HeaderPage {
         }
 
         return new TableStats(getStatNumDataPages(dbPage),
-            getStatNumTuples(dbPage), getStatAvgTupleSize(dbPage), colStats);
+            getStatNumTuples(dbPage), getStatAvgTupleSize(dbPage), 
+            getStatMinTupleSize(dbPage), getStatMaxTupleSize(dbPage), colStats);
     }
 
 
@@ -404,6 +476,8 @@ public class HeaderPage {
         setStatNumDataPages(dbPage, stats.numDataPages);
         setStatNumTuples(dbPage, stats.numTuples);
         setStatAvgTupleSize(dbPage, stats.avgTupleSize);
+        setStatMinTupleSize(dbPage, stats.minTupleSize);
+        setStatMaxTupleSize(dbPage, stats.maxTupleSize);
 
         PageWriter writer = new PageWriter(dbPage);
         writer.setPosition(getStatsOffset(dbPage) + RELOFF_COLUMN_STATS);

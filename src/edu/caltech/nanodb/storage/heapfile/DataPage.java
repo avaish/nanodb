@@ -240,8 +240,8 @@ public class DataPage {
      *                  pages are like DataPages so it's ok.
      */
     public static void setPointer(DBPage dbPage, int pointer) {
-    	PageWriter pageWriter = new PageWriter(dbPage);
-    	pageWriter.setPosition(dbPage.getPageSize() - 4);
+        PageWriter pageWriter = new PageWriter(dbPage);
+        pageWriter.setPosition(dbPage.getPageSize() - 4);
         pageWriter.writeInt(pointer);
         logger.debug("Created pointer to page " + pointer + ".");
     }
@@ -265,8 +265,8 @@ public class DataPage {
      *                  pages are like DataPages so it's ok.
      */
     public static int getPointer(DBPage dbPage) {
-    	PageReader pageReader = new PageReader(dbPage);
-    	pageReader.setPosition(dbPage.getPageSize() - 4);
+        PageReader pageReader = new PageReader(dbPage);
+        pageReader.setPosition(dbPage.getPageSize() - 4);
         return pageReader.readInt();
     }
 

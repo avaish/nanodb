@@ -1,0 +1,26 @@
+# This setup SQL is used for the simple-selects test case
+setup_testSimpleSelects = \
+    CREATE TABLE test_simple_selects ( \
+        a INTEGER, \
+        b INTEGER \
+    ); \
+    INSERT INTO test_simple_selects VALUES ( 0, NULL ); \
+    INSERT INTO test_simple_selects VALUES ( 1, 10 ); \
+    INSERT INTO test_simple_selects VALUES ( 2, 20 ); \
+    INSERT INTO test_simple_selects VALUES ( 3, 30 ); \
+    INSERT INTO test_simple_selects VALUES ( 4, NULL );
+
+
+# This setup SQL is used for the select/project test case
+setup_testSelectProject = \
+    CREATE TABLE test_select_project ( \
+        a INTEGER, \
+        b VARCHAR(20), \
+        c INTEGER \
+    ); \
+    INSERT INTO test_select_project VALUES ( 1,    'red',   10 ); \
+    INSERT INTO test_select_project VALUES ( 2, 'orange',   20 ); \
+    INSERT INTO test_select_project VALUES ( 3,     NULL,   30 ); \
+    INSERT INTO test_select_project VALUES ( 4,  'green', NULL ); \
+    INSERT INTO test_select_project VALUES ( 5, 'yellow',   40 ); \
+    INSERT INTO test_select_project VALUES ( 6,   'blue',   50 );

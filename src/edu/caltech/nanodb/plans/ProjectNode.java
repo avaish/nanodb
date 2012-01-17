@@ -25,6 +25,14 @@ public class ProjectNode extends PlanNode {
     private static Logger logger = Logger.getLogger(ProjectNode.class);
 
 
+    /**
+     * This is our guess of how many unique values will be produced by a
+     * project expression, when we cannot determine it from the child plan's
+     * statistics.
+     */
+    private static final int GUESS_NUM_UNIQUE_VALUES = 100;
+
+
     /** The schema of tuples produced by the subplan. */
     private Schema inputSchema;
 
@@ -78,9 +86,14 @@ public class ProjectNode extends PlanNode {
         // expected to come into this plan-node.
 
         PlanCost inputCost = leftChild.getCost();
-
-        cost = new PlanCost(inputCost);
-        cost.cpuCost += inputCost.numTuples;
+        if (inputCost != null) {
+            cost = new PlanCost(inputCost);
+            cost.cpuCost += inputCost.numTuples;
+        }
+        else {
+            logger.info(
+                "Child's cost not available; not computing this node's cost.");
+        }
 
         // TODO:  Estimate the final tuple-size.  It isn't hard, just tedious.
     }
@@ -94,7 +107,6 @@ public class ProjectNode extends PlanNode {
     protected void prepareSchemaStats() {
         inputSchema = leftChild.getSchema();
         ArrayList<ColumnStats> inputStats = leftChild.getStats();
-        PlanCost inputCost = leftChild.getCost();
 
         schema = new Schema();
         nonWildcardColumnInfos = new ArrayList<ColumnInfo>();
@@ -148,7 +160,18 @@ public class ProjectNode extends PlanNode {
 
                     // TODO:  We could be more sophisticated about this...
                     ColumnStats colStat = new ColumnStats();
-                    colStat.setNumUniqueValues((int) (inputCost.numTuples + 0.5f));
+
+                    PlanCost inputCost = leftChild.getCost();
+                    if (inputCost != null) {
+                        // Adding 0.5 and casting to int is equivalent to
+                        // rounding, as long as the input >= 0.
+                        colStat.setNumUniqueValues(
+                            (int) (inputCost.numTuples + 0.5f));
+                    }
+                    else {
+                        colStat.setNumUniqueValues(GUESS_NUM_UNIQUE_VALUES);
+                    }
+
                     stats.add(colStat);
                 }
 

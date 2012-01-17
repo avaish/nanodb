@@ -10,5 +10,13 @@ CPATH=$CPATH:build/classes
 
 JAVA_OPTS="-Dlog4j.configuration=logging.conf"
 
-java $JAVA_OPTS -cp $CPATH edu.caltech.nanodb.client.ExclusiveClient
+# See if we have the rlwrap utility; if so, it makes using NanoDB
+# from the command-line sooo much nicer...
+testrl=$(which rlwrap)
+if [ -z "$testrl" ] 
+then
+    java $JAVA_OPTS -cp $CPATH edu.caltech.nanodb.client.ExclusiveClient
+else
+    rlwrap java $JAVA_OPTS -cp $CPATH edu.caltech.nanodb.client.ExclusiveClient
+fi
 

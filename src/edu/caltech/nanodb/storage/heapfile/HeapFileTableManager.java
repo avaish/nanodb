@@ -181,14 +181,10 @@ public class HeapFileTableManager implements TableManager {
         int maxTupleSize = 1;
         for (ColumnInfo column : schema.getColumnInfos()) {
             if (column.getType().hasLength())
-            {
             	maxTupleSize += PageTuple.getStorageSize(column.getType(), 
             			column.getType().getLength());
-            }
             else
-            {
             	maxTupleSize += PageTuple.getStorageSize(column.getType(), 0);
-            }
             minTupleSize += PageTuple.getStorageSize(column.getType(), 0);
         }
         TableStats stats = new TableStats(minTupleSize, maxTupleSize, 
@@ -694,7 +690,7 @@ public class HeapFileTableManager implements TableManager {
         TableStats stats = HeaderPage.getTableStats(prev, tblFileInfo);
         int minTupleSize = stats.minTupleSize;
         int maxTupleSize = stats.maxTupleSize;
-        double necessarySpace = (minTupleSize + maxTupleSize) / 2.0;
+        double necessary = (minTupleSize + maxTupleSize) / 2.0;
         
         int pageNo = DataPage.getPointer(prev);
         DBPage dbPage = null;
@@ -752,12 +748,15 @@ public class HeapFileTableManager implements TableManager {
 
         DataPage.sanityCheck(dbPage);
         
-        int freeSpace = DataPage.getFreeSpaceInPage(dbPage);
+        // Check to see whether the modified page is filled, and remove it from
+        // the linked list of free pages if it is.
         
-        if (freeSpace < necessarySpace) {
+        int free = DataPage.getFreeSpaceInPage(dbPage);
+        
+        if (free < necessary) {
         	DataPage.setPointer(prev, DataPage.getPointer(dbPage));
-        	logger.debug("Free space " + freeSpace + " is less than " + necessarySpace);
-        	logger.debug("Page has been marked filled.");
+        	logger.debug("Free space " + free + " is less than " + necessary);
+        	logger.debug("Page has been filled.");
         }
 
         return pageTup;
@@ -809,7 +808,7 @@ public class HeapFileTableManager implements TableManager {
 
         DBPage dbPage = ptup.getDBPage();
         
-        int oldSpace = DataPage.getFreeSpaceInPage(dbPage);
+        int old = DataPage.getFreeSpaceInPage(dbPage);
         DataPage.deleteTuple(dbPage, ptup.getSlot());
 
         DataPage.sanityCheck(dbPage);
@@ -818,14 +817,17 @@ public class HeapFileTableManager implements TableManager {
         TableStats stats = HeaderPage.getTableStats(headerPage, tblFileInfo);
         int minTupleSize = stats.minTupleSize;
         int maxTupleSize = stats.maxTupleSize;
-        double necessarySpace = (minTupleSize + maxTupleSize) / 2.0;
+        double necessary = (minTupleSize + maxTupleSize) / 2.0;
         
-        int freeSpace = DataPage.getFreeSpaceInPage(dbPage);
+        // If the modified page was filled, check if it still is, and place it
+        // back in the linked list of free pages if it is not.
         
-        if ((freeSpace > necessarySpace) && (oldSpace < necessarySpace)) {
+        int free = DataPage.getFreeSpaceInPage(dbPage);
+        
+        if ((free > necessary) && (old < necessary)) {
         	DataPage.setPointer(dbPage, DataPage.getPointer(headerPage));
         	DataPage.setPointer(headerPage, dbPage.getPageNo());
-        	logger.debug("Free space " + freeSpace + " is more than " + necessarySpace);
+        	logger.debug("Free space " + free + " is more than " + necessary);
         	logger.debug("Page has been reclaimed.");
         }
     }

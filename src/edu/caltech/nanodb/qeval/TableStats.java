@@ -27,16 +27,19 @@ public class TableStats {
      */
     public float avgTupleSize;
     
+    
     /**
      * The minimum number of bytes in tuples in this table file.
      */
     public int minTupleSize;
+    
     
     /**
      * The maximum number of bytes in tuples in this table file.
      */
     public int maxTupleSize;
 
+    
     /**
      * This collection holds statistics about individual columns in the table.
      */
@@ -89,6 +92,7 @@ public class TableStats {
             columnStats.add(new ColumnStats());
     }
     
+    
     /**
      * Create a new table-statistics object with all statistics initialized to
      * zero, except minTupleSize and maxTupleSize.
@@ -109,6 +113,7 @@ public class TableStats {
             columnStats.add(new ColumnStats());
     }
 
+    
     /**
      * Returns the column-statistics for the specified column.
      *

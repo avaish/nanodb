@@ -122,6 +122,7 @@ public class HeaderPage {
      */
     public static final int RELOFF_AVG_TUPLE_SIZE = 6;
     
+    
     /**
      * This is the <em>relative</em> offset of the maximum tuple-size in the
      * data file, relative to the start of the table statistics.  This value is
@@ -130,6 +131,7 @@ public class HeaderPage {
      * @see #getStatsOffset
      */
     public static final int RELOFF_MIN_TUPLE_SIZE = 10;
+    
     
     /**
      * This is the <em>relative</em> offset of the maximum tuple-size in the
@@ -140,6 +142,7 @@ public class HeaderPage {
      */
     public static final int RELOFF_MAX_TUPLE_SIZE = 14;
 
+    
     /**
      * This is the <em>relative</em> offset of the column statistics in the
      * data file, relative to the start of the table statistics.  The column
@@ -158,18 +161,21 @@ public class HeaderPage {
      */
     private static final int COLSTAT_NULLMASK_NUM_DISTINCT_VALUES = 0x08;
 
+    
     /**
      * A bit-mask used for storing column-stats, to record whether or not the
      * "number of <tt>NULL</tt> values" value is present for the column.
      */
     private static final int COLSTAT_NULLMASK_NUM_NULL_VALUES = 0x04;
 
+    
     /**
      * A bit-mask used for storing column-stats, to record whether or not the
      * "minimum value" value is present for the column.
      */
     private static final int COLSTAT_NULLMASK_MIN_VALUE = 0x02;
 
+    
     /**
      * A bit-mask used for storing column-stats, to record whether or not the
      * "maximum value" value is present for the column.
@@ -369,7 +375,7 @@ public class HeaderPage {
      * Updates the "minimum tuple size" statistic for this heap file.
      *
      * @param dbPage the header page of the heap file.
-     * @param avgTupleSize the "minimum tuple size" value to store.
+     * @param minTupleSize the "minimum tuple size" value to store.
      */
     public static void setStatMinTupleSize(DBPage dbPage, int minTupleSize) {
         verifyIsHeaderPage(dbPage);
@@ -392,11 +398,12 @@ public class HeaderPage {
         return dbPage.readInt(offset);
     }
     
+    
     /**
      * Updates the "maximum tuple size" statistic for this heap file.
      *
      * @param dbPage the header page of the heap file.
-     * @param avgTupleSize the "maximum tuple size" value to store.
+     * @param maxTupleSize the "maximum tuple size" value to store.
      */
     public static void setStatMaxTupleSize(DBPage dbPage, int maxTupleSize) {
         verifyIsHeaderPage(dbPage);
@@ -419,6 +426,7 @@ public class HeaderPage {
         return dbPage.readInt(offset);
     }
 
+    
     public static TableStats getTableStats(DBPage dbPage,
                                            TableFileInfo tblFileInfo) {
         verifyIsHeaderPage(dbPage);

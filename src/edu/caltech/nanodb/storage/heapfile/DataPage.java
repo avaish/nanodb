@@ -229,6 +229,15 @@ public class DataPage {
      * 
      * @param dbPage the data page to write to
      * @param pointer the pointer to set
+     * 
+     * @design (Atharv) This is in the DataPage class as a static method,
+     *                  instead of the DBPage class, since it's only to be used
+     *                  in a HeapFile table setup, and all the methods relating
+     *                  to HeapFile setups are in the HeaderPage and DataPage
+     *                  class. It's in the DataPage class because the pointers
+     *                  point to DataPages. This gets a bit weird when used with
+     *                  a header page, but when it comes to pointers, header
+     *                  pages are like DataPages so it's ok.
      */
     public static void setPointer(DBPage dbPage, int pointer) {
     	PageWriter pageWriter = new PageWriter(dbPage);
@@ -245,6 +254,15 @@ public class DataPage {
      * @param dbPage the data page to write to
      * 
      * @return the pointer to the next page
+     * 
+     * @design (Atharv) This is in the DataPage class as a static method,
+     *                  instead of the DBPage class, since it's only to be used
+     *                  in a HeapFile table setup, and all the methods relating
+     *                  to HeapFile setups are in the HeaderPage and DataPage
+     *                  class. It's in the DataPage class because the pointers
+     *                  point to DataPages. This gets a bit weird when used with
+     *                  a header page, but when it comes to pointers, header
+     *                  pages are like DataPages so it's ok.
      */
     public static int getPointer(DBPage dbPage) {
     	PageReader pageReader = new PageReader(dbPage);

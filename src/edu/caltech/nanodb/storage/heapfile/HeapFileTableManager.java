@@ -38,7 +38,8 @@ import edu.caltech.nanodb.storage.TableManager;
 
 /**
  * This class manages heap files that use the slotted page format for storing
- * variable-size tuples.
+ * variable-size tuples. A linked list implementation using pages on disk is
+ * used to speed up insertions.
  */
 public class HeapFileTableManager implements TableManager {
 

@@ -645,6 +645,9 @@ public class HeapFileTableManager implements TableManager {
     /**
      * Adds the specified tuple into the table file.  A new
      * <tt>HeapFilePageTuple</tt> object corresponding to the tuple is returned.
+	 * A linked list mechanism is used. During insertion, a linked list of free
+	 * pages is iterated over rather than all the pages in the file to speed up
+	 * insertion. Free pages that become filled are removed from the list.
      *
      * @review (donnie) This could be made a little more space-efficient.
      *         Right now when computing the required space, we assume that we

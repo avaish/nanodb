@@ -3,6 +3,7 @@ package edu.caltech.nanodb.expressions;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collections;
 
 import edu.caltech.nanodb.relations.Tuple;
 
@@ -51,6 +52,17 @@ public class TupleLiteral implements Tuple, Serializable {
     public TupleLiteral(Tuple tuple) {
         this();
         appendTuple(tuple);
+    }
+
+
+    /**
+     * Constructs a new tuple-literal that contains the specified values.
+     *
+     * @param inputs the collection of values to store in the tuple
+     */
+    public TupleLiteral(Object... inputs) {
+        values = new ArrayList<Object>(inputs.length);
+        Collections.addAll(values, inputs);
     }
 
 

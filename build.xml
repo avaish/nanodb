@@ -49,8 +49,10 @@
         <fileset dir="${libDir}">
             <include name="antlr-3.2.jar" />
             <include name="log4j-1.2.13.jar" />
-            <include name="bsh-2.0b4.jar" />
+            <!-- DEPRECATED:  <include name="bsh-2.0b4.jar" /> -->
             <include name="commons-lang-2.4.jar" />
+            <!-- NEW:  <include name="commons-lang3-3.1.jar" /> -->
+            <include name="commons-io-2.1.jar" />
         </fileset>
     </path>
 
@@ -62,7 +64,7 @@
             <include name="testng-5.8-jdk15.jar" />
         </fileset>
     </path>
-    
+
     <path id="findbugs.path">
         <path refid="libs.path" />
 
@@ -149,7 +151,7 @@
     </target>
 
     <target name="compile" depends="debug,-init"
-            description="compile the source">
+            description="Compiles the source code for NanoDB.">
 
         <mkdir dir="${buildClassesDir}" />
 
@@ -164,7 +166,8 @@
     </target>
 
 
-    <target name="compiletests" depends="compile">
+    <target name="compiletests" depends="compile"
+            description="Compiles the test code for NanoDB.">
         <mkdir dir="${testBuildDir}" />
 
         <javac destdir="${testBuildDir}" classpathref="test.path"
@@ -173,10 +176,19 @@
 
             <src path="${testSrcDir}" />
         </javac>
+
+        <!--
+          We have some resources in the test directories that we need to move
+          across to the test-build directory.
+          -->
+        <copy todir="${testBuildDir}">
+            <fileset dir="${testSrcDir}" includes="**/*.props" />
+        </copy>
     </target>
 
 
-    <target name="test" depends="compiletests">
+    <target name="test" depends="compiletests"
+            description="Runs all tests against NanoDB.">
         <delete dir="${testTempDir}" />
         <mkdir dir="${testResultsDir}" />
 
@@ -186,13 +198,20 @@
                 <path refid="test.path" />
             </classpath>
 
-            <classfileset dir="${testBuildDir}" includes="**/Test*.class" />
+            <classfileset dir="${testBuildDir}">
+                <include name="**/Test*.class" />
+
+                <!-- Specific tests can be excluded with lines like this. -->
+                <!--
+                <exclude name="**/TestDataPage.class" />
+                -->
+            </classfileset>
         </testng>
     </target>
 
 
     <target name="jar" depends="compile"
-          description="Create a distribution jar-file.">
+            description="Create a distribution jar-file.">
 
         <!-- Put all of the classes into an appropriately-named JAR file. -->
         <jar jarfile="${buildDir}/${distJarFile}" basedir="${buildClassesDir}">
@@ -203,7 +222,7 @@
     </target>
 
 
-    <target name="javadoc" depends="-init" description="Generate JavaDocs.">
+    <target name="javadoc" depends="-init" description="Generates JavaDocs.">
         <mkdir dir="${javaDocDir}" />
 
         <javadoc packagenames="*" destdir="${javaDocDir}" classpathref="libs.path"
@@ -230,13 +249,13 @@
         </copy>
     </target>
 
-    <target name="clean" description="Clean up all build artifacts.">
+    <target name="clean" description="Cleans up all build artifacts.">
         <delete dir="${buildDir}"/>
     </target>
 
 
     <target name="findbugs" depends="jar"
-            description="Run FindBugs static code-analysis tool">
+            description="Run FindBugs static code-analysis tool.">
         <findbugs home="${findbugsHomeDir}" effort="max"
                   output="html" outputFile="${buildDir}/nanodb-fb.html"
                   excludefilter="fb-excl.xml">

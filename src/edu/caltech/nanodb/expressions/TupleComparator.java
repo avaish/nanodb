@@ -127,4 +127,55 @@ public class TupleComparator implements Comparator<Tuple> {
 
         return compareResult;
     }
+
+
+    /**
+     * This helper function returns true if two tuples have the same number of
+     * columns and the values compare as equal when coerced with the
+     * {@link TypeConverter#coerceComparison} method.  Note that the schemas of
+     * the tuples are not considered.
+     *
+     * @param t1 the first tuple to compare
+     * @param t2 the second tuple to compare
+     * @return true if the two tuples have the same number of columns, and the
+     *         values from <tt>t1</tt> and <tt>t2</tt> compare equal.
+     */
+    public static boolean areTuplesEqual(Tuple t1, Tuple t2) {
+        if (t1 == null)
+            throw new IllegalArgumentException("t1 cannot be null");
+
+        if (t2 == null)
+            throw new IllegalArgumentException("t2 cannot be null");
+        
+        if (t1.getColumnCount() != t2.getColumnCount())
+            return false;
+        
+        int size = t1.getColumnCount();
+        for (int i = 0; i < size; i++) {
+            Object obj1 = t1.getColumnValue(i);
+            Object obj2 = t2.getColumnValue(i);
+
+            if (obj1 == null) {
+                if (obj2 != null) {
+                    // obj1 is null, but obj2 isn't.
+                    return false;
+                }
+
+                // If we got here, both obj1 and obj2 are null.
+            }
+            else if (obj2 == null) {
+                // obj1 isn't null, but obj2 is.
+                return false;
+            }
+            else {
+                // Both objects are non-null.
+                TypeConverter.Pair p =
+                    TypeConverter.coerceComparison(obj1, obj2);
+                if (!p.value1.equals(p.value2))
+                    return false;
+            }
+        }
+
+        return true;
+    }
 }

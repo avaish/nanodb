@@ -1,6 +1,11 @@
 package edu.caltech.nanodb.server;
 
 
+import edu.caltech.nanodb.commands.SelectCommand;
+import edu.caltech.nanodb.expressions.TupleLiteral;
+import edu.caltech.nanodb.qeval.TupleProcessor;
+import edu.caltech.nanodb.relations.Schema;
+import edu.caltech.nanodb.relations.TableSchema;
 import edu.caltech.nanodb.relations.Tuple;
 
 import java.io.Serializable;
@@ -14,6 +19,30 @@ import java.util.List;
  * @review (Donnie) Maybe we should include the command that was run.
  */
 public class CommandResult implements Serializable {
+
+    /**
+     * This inner class is used to collect the results of a
+     * {@link edu.caltech.nanodb.commands.SelectCommand}.
+     */
+    private class ResultCollector implements TupleProcessor {
+        public void setSchema(Schema s) {
+            if (s instanceof TableSchema)
+                s = new Schema(s);
+
+            schema = s;
+        }
+
+        public void process(Tuple tuple) {
+            // Store the tuple.
+            if (tuple instanceof TupleLiteral)
+                tuples.add((TupleLiteral) tuple);
+            else
+                tuples.add(new TupleLiteral(tuple));
+        }
+
+    }
+    
+    
     /** The system time when command execution started. */
     private long startTimestamp = -1;
 
@@ -26,7 +55,7 @@ public class CommandResult implements Serializable {
      * If a failure occurs while a command is being executed, this will be the
      * exception that indicated the failure.
      */
-    private Throwable failure = null;
+    private Exception failure = null;
     
     
 
@@ -36,11 +65,17 @@ public class CommandResult implements Serializable {
 
     /**
      * If the command was a <tt>SELECT</tt> query and the results are to be
+     * kept, this will be the schema of the results as computed by the database.
+     */
+    private Schema schema = null;
+    
+
+    /**
+     * If the command was a <tt>SELECT</tt> query and the results are to be
      * kept, this will be a collection of the tuples in the order they were
      * produced by the database.
      */
-    private ArrayList<Tuple> tuples = null;
-
+    private ArrayList<TupleLiteral> tuples = null;
 
 
     public void startExecution() {
@@ -48,11 +83,17 @@ public class CommandResult implements Serializable {
     }
     
     
-    public void recordFailure(Throwable t) {
-        if (t == null)
+    public void collectSelectResults(SelectCommand command) {
+        tuples = new ArrayList<TupleLiteral>();
+        command.setTupleProcessor(new ResultCollector());
+    }
+
+
+    public void recordFailure(Exception e) {
+        if (e == null)
             throw new IllegalArgumentException("t cannot be null");
 
-        failure = t;
+        failure = e;
     }
     
     
@@ -61,18 +102,8 @@ public class CommandResult implements Serializable {
     }
     
     
-    public Throwable getFailure() {
+    public Exception getFailure() {
         return failure;
-    }
-
-    
-    public void addTuple(Tuple t) {
-        if (tuples == null) {
-            tuples = new ArrayList<Tuple>();
-            firstResultTimestamp = System.currentTimeMillis();
-        }
-
-        tuples.add(t);
     }
 
 
@@ -104,7 +135,12 @@ public class CommandResult implements Serializable {
     }
 
 
-    public List<Tuple> getTuples() {
-        return Collections.unmodifiableList(tuples);
+    public Schema getSchema() {
+        return schema;
+    }
+
+
+    public List<TupleLiteral> getTuples() {
+        return tuples;
     }
 }

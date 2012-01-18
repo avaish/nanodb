@@ -91,7 +91,7 @@ public class ProjectNode extends PlanNode {
             cost.cpuCost += inputCost.numTuples;
         }
         else {
-            logger.info(
+            logger.debug(
                 "Child's cost not available; not computing this node's cost.");
         }
 

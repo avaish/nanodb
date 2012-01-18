@@ -139,11 +139,16 @@ public abstract class QueryCommand extends Command {
                 out.println();
 
                 PlanCost cost = plan.getCost();
-                out.printf("Estimated %f tuples with average size %f%n",
-                    cost.numTuples, cost.tupleSize);
-                out.println("Estimated number of block IOs:  " +
-                    cost.numBlockIOs);
-                logger.debug("Estimated CPU cost:  " + cost.cpuCost);
+                if (cost != null) {
+                    out.printf("Estimated %f tuples with average size %f%n",
+                        cost.numTuples, cost.tupleSize);
+                    out.println("Estimated number of block IOs:  " +
+                        cost.numBlockIOs);
+                    logger.debug("Estimated CPU cost:  " + cost.cpuCost);
+                }
+                else {
+                    out.println("Plan cost is not available.");
+                }
             }
         }
         catch (ExecutionException e) {

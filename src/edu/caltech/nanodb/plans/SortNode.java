@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 import edu.caltech.nanodb.expressions.OrderByExpression;
 import edu.caltech.nanodb.expressions.TupleComparator;
 import edu.caltech.nanodb.expressions.TupleLiteral;
@@ -19,6 +21,9 @@ import edu.caltech.nanodb.relations.Tuple;
 /**
  */
 public class SortNode extends PlanNode {
+
+    /** A logging object for reporting anything interesting that happens. **/
+    private static Logger logger = Logger.getLogger(SortNode.class);
 
 
     private List<OrderByExpression> orderByExprs;
@@ -98,10 +103,16 @@ public class SortNode extends PlanNode {
         // of sorting.
 
         PlanCost childCost = leftChild.getCost();
-        cost = new PlanCost(childCost);
+        if (childCost != null) {
+            cost = new PlanCost(childCost);
 
-        // Sorting is an N*log(N) operation.
-        cost.cpuCost += cost.numTuples * (float) Math.log(cost.numTuples);
+            // Sorting is an N*log(N) operation.
+            cost.cpuCost += cost.numTuples * (float) Math.log(cost.numTuples);
+        }
+        else {
+            logger.info(
+                "Child's cost not available; not computing this node's cost.");
+        }
 
         // We can prepare the tuple-comparator here too, since we know what the
         // subplan's schema will be.

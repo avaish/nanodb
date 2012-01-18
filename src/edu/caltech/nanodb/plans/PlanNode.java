@@ -349,8 +349,12 @@ public abstract class PlanNode implements Cloneable {
         StringBuilder buf = new StringBuilder();
         buf.append(indent);
         buf.append(toString());
-        if (includeCosts)
-            buf.append(" cost=").append(cost);
+        if (includeCosts) {
+            if (cost != null)
+                buf.append(" cost=").append(cost);
+            else
+                buf.append(" cost is unknown");
+        }
 
         out.println(buf.toString());
 

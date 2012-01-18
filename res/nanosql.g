@@ -256,7 +256,7 @@ table_decl[CreateTableCommand ct] :
 /**
  * Table column declarations are similar to view column declarations, but can
  * have additional syntax declaring constraints on values in the table-column.
- **/
+ */
 table_col_decl[CreateTableCommand cTab] returns [ColumnInfo colInfo]
   {
     colInfo = null;

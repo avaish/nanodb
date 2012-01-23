@@ -11,7 +11,11 @@ import edu.caltech.nanodb.expressions.Expression;
 
 import edu.caltech.nanodb.plans.FileScanNode;
 import edu.caltech.nanodb.plans.PlanNode;
+import edu.caltech.nanodb.plans.ProjectNode;
+import edu.caltech.nanodb.plans.RenameNode;
 import edu.caltech.nanodb.plans.SelectNode;
+import edu.caltech.nanodb.plans.SimpleFilterNode;
+import edu.caltech.nanodb.plans.SortNode;
 
 import edu.caltech.nanodb.storage.StorageManager;
 import edu.caltech.nanodb.storage.TableFileInfo;
@@ -42,8 +46,59 @@ public class SimplePlanner implements Planner {
      *         load schema and indexing information.
      */
     public PlanNode makePlan(SelectClause selClause) throws IOException {
-        // TODO:  Implement.
-        return null;
+    	for (SelectValue s : selClause.getSelectValues()) {
+    		logger.debug(s);
+    		if (s.isExpression())
+    			logger.debug("Expression: " + s.getExpression());
+    		else if (s.isScalarSubquery())
+    			logger.debug("Scalar Subquery: " + s.getScalarSubquery());
+    		else if (s.isWildcard())
+    			logger.debug("Wildcard: " + s.getWildcard());
+    		else
+    			logger.debug("Simple Column Value: " + s);
+    	}
+    	PlanNode top;
+    	if (selClause.getFromClause().isBaseTable()) {
+    		if (selClause.getFromClause().getResultName().equals(selClause.
+    				getFromClause().getTableName())) {
+    			FileScanNode fs =  new FileScanNode(StorageManager.
+    	    			getInstance().openTable(selClause.getFromClause().
+    	    			getTableName()), selClause.getWhereExpr());
+    	    	top = fs;
+    		}
+    		else {
+    			FileScanNode fs =  new FileScanNode(StorageManager.
+    	    			getInstance().openTable(selClause.getFromClause().
+    	    			getTableName()), null);
+    	    	top = new RenameNode(fs, selClause.getFromClause().getResultName());
+    	    	if (selClause.getWhereExpr() != null) {
+        			top = new SimpleFilterNode(top, selClause.getWhereExpr());
+        		}
+    		}
+    	}
+    	else {
+    		top = new RenameNode((makePlan(selClause.getFromClause().
+    			getSelectClause())), selClause.getFromClause().getResultName());
+    		if (selClause.getWhereExpr() != null) {
+    			top = new SimpleFilterNode(top, selClause.getWhereExpr());
+    		}
+    	}
+    	if ((selClause.getOrderByExprs() != null) && 
+    		(!selClause.getOrderByExprs().isEmpty())) {
+    		logger.debug(selClause.getOrderByExprs());
+    		SortNode sn = new SortNode(top, selClause.getOrderByExprs());
+    		top = sn;
+    	}
+    	if (selClause.isTrivialProject()) {
+    		top.prepare();
+    		return top;
+    	}
+    	else {
+    		ProjectNode pn = new ProjectNode(top, selClause.getSelectValues());
+    		top = pn;
+    	}
+    	top.prepare();
+    	return top;
     }
 
 

@@ -3,6 +3,7 @@ package edu.caltech.nanodb.plans;
 
 import edu.caltech.nanodb.expressions.Expression;
 import edu.caltech.nanodb.expressions.OrderByExpression;
+import edu.caltech.nanodb.expressions.TupleLiteral;
 import edu.caltech.nanodb.qeval.ColumnStats;
 import edu.caltech.nanodb.qeval.PlanCost;
 import edu.caltech.nanodb.qeval.SelectivityEstimator;
@@ -29,18 +30,35 @@ public class NestedLoopsJoinNode extends ThetaJoinNode {
 
     /** Set to true when we have exhausted all tuples from our subplans. */
     private boolean done;
+    
+    /** Set to true if tuples match when computing a outer join. */
+    private boolean matched;
+    
+    /** Set to true if we are doing some sort of inner join. */
+    private boolean isInnerJoin;
+    
+    /** Null tuple for right schema. */
+    private static Tuple NULL_TUPLE;
 
 
     public NestedLoopsJoinNode(PlanNode leftChild, PlanNode rightChild,
                 JoinType joinType, Expression predicate) {
 
         super(leftChild, rightChild, joinType, predicate);
+        
+        if (joinType != JoinType.CROSS && joinType != JoinType.INNER)
+        	isInnerJoin = false;
+        else
+        	isInnerJoin = true;
+        
+        if (joinType == JoinType.RIGHT_OUTER)
+        	super.swap();
     }
 
 
     /**
      * Checks if the argument is a plan node tree with the same structure, but not
-     * necesarily the same references.
+     * necessarily the same references.
      *
      * @param obj the object to which we are comparing
      */
@@ -148,6 +166,8 @@ public class NestedLoopsJoinNode extends ThetaJoinNode {
 
         // Use the parent class' helper-function to prepare the schema.
         prepareSchemaStats();
+        
+        NULL_TUPLE = new TupleLiteral(rightSchema.numColumns());
 
         // TODO:  Implement the rest
         cost = null;
@@ -175,8 +195,10 @@ public class NestedLoopsJoinNode extends ThetaJoinNode {
             return null;
 
         while (getTuplesToJoin()) {
-            if (canJoinTuples())
+            if (canJoinTuples() || rightTuple.equals(NULL_TUPLE)) {
+            	matched = true || isInnerJoin;
                 return joinTuples(leftTuple, rightTuple);
+            }
         }
 
         return null;
@@ -197,17 +219,23 @@ public class NestedLoopsJoinNode extends ThetaJoinNode {
         		return false;
         	}
         	leftTuple = tempLeft;
+        	matched = false || isInnerJoin;
         }
     	Tuple tempRight = rightChild.getNextTuple();
     	if (tempRight == null) {
     		if (rightTuple == null) {
     			return false;
     		}
+    		if (!matched) {
+    			rightTuple = NULL_TUPLE;
+    			return true;
+    		}
     		Tuple tempLeft = leftChild.getNextTuple();
         	if (tempLeft == null) {
         		return false;
         	}
         	leftTuple = tempLeft;
+        	matched = false || isInnerJoin;
         	rightChild.initialize();
         	rightTuple = rightChild.getNextTuple();
         	return true;

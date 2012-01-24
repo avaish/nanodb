@@ -805,20 +805,20 @@ public class FromClause {
 
         // Handle the non-shared columns
         for (ColumnInfo colInfo : leftSchema) {
-            if (!commonCols.contains(colInfo.getName()))
+            if (!commonCols.contains(colInfo.getName())) {
                 result.addColumnInfo(colInfo);
             
-            if (preparedSelectValues != null) {
-                SelectValue selVal = new SelectValue(colInfo.getColumnName());
+                SelectValue selVal = new SelectValue(
+                    new ColumnValue(colInfo.getColumnName()), null);
                 preparedSelectValues.add(selVal);
             }
         }
         for (ColumnInfo colInfo : rightSchema) {
-            if (!commonCols.contains(colInfo.getName()))
+            if (!commonCols.contains(colInfo.getName())) {
                 result.addColumnInfo(colInfo);
 
-            if (preparedSelectValues != null) {
-                SelectValue selVal = new SelectValue(colInfo.getColumnName());
+                SelectValue selVal = new SelectValue(
+                    new ColumnValue(colInfo.getColumnName()), null);
                 preparedSelectValues.add(selVal);
             }
         }

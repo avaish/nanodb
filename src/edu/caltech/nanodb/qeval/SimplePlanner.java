@@ -10,6 +10,7 @@ import edu.caltech.nanodb.commands.SelectValue;
 import edu.caltech.nanodb.expressions.Expression;
 
 import edu.caltech.nanodb.plans.FileScanNode;
+import edu.caltech.nanodb.plans.NestedLoopsJoinNode;
 import edu.caltech.nanodb.plans.PlanNode;
 import edu.caltech.nanodb.plans.ProjectNode;
 import edu.caltech.nanodb.plans.RenameNode;
@@ -46,46 +47,12 @@ public class SimplePlanner implements Planner {
      *         load schema and indexing information.
      */
     public PlanNode makePlan(SelectClause selClause) throws IOException {
-    	for (SelectValue s : selClause.getSelectValues()) {
-    		logger.debug(s);
-    		if (s.isExpression())
-    			logger.debug("Expression: " + s.getExpression());
-    		else if (s.isScalarSubquery())
-    			logger.debug("Scalar Subquery: " + s.getScalarSubquery());
-    		else if (s.isWildcard())
-    			logger.debug("Wildcard: " + s.getWildcard());
-    		else
-    			logger.debug("Simple Column Value: " + s);
-    	}
-    	PlanNode top;
-    	if (selClause.getFromClause().isBaseTable()) {
-    		if (selClause.getFromClause().getResultName().equals(selClause.
-    				getFromClause().getTableName())) {
-    			FileScanNode fs =  new FileScanNode(StorageManager.
-    	    			getInstance().openTable(selClause.getFromClause().
-    	    			getTableName()), selClause.getWhereExpr());
-    	    	top = fs;
-    		}
-    		else {
-    			FileScanNode fs =  new FileScanNode(StorageManager.
-    	    			getInstance().openTable(selClause.getFromClause().
-    	    			getTableName()), null);
-    	    	top = new RenameNode(fs, selClause.getFromClause().getResultName());
-    	    	if (selClause.getWhereExpr() != null) {
-        			top = new SimpleFilterNode(top, selClause.getWhereExpr());
-        		}
-    		}
-    	}
-    	else {
-    		top = new RenameNode((makePlan(selClause.getFromClause().
-    			getSelectClause())), selClause.getFromClause().getResultName());
-    		if (selClause.getWhereExpr() != null) {
-    			top = new SimpleFilterNode(top, selClause.getWhereExpr());
-    		}
-    	}
+    	PlanNode top = null;
+    	
+    	top = processFromClause(selClause.getFromClause(), selClause.getWhereExpr());
+    	
     	if ((selClause.getOrderByExprs() != null) && 
     		(!selClause.getOrderByExprs().isEmpty())) {
-    		logger.debug(selClause.getOrderByExprs());
     		SortNode sn = new SortNode(top, selClause.getOrderByExprs());
     		top = sn;
     	}
@@ -99,6 +66,42 @@ public class SimplePlanner implements Planner {
     	}
     	top.prepare();
     	return top;
+    }
+    
+    private PlanNode processFromClause(FromClause fromClause, Expression predicate) throws IOException {
+    	PlanNode top = null;
+    	if (fromClause.isBaseTable()) {
+    		if (fromClause.isRenamed()) {
+    			FileScanNode fs =  new FileScanNode(StorageManager.
+        	    	getInstance().openTable(fromClause. getTableName()), null);
+        	    top = new RenameNode(fs, fromClause.getResultName());
+        	    if (predicate != null) {
+            		top = new SimpleFilterNode(top, predicate);
+            	}
+    		}
+    		else {
+    			FileScanNode fs =  new FileScanNode(StorageManager.
+    				getInstance().openTable(fromClause.
+        	    	getTableName()), predicate);
+        	    top = fs;
+    		}
+    	}
+    	else if (fromClause.isDerivedTable()) {
+    		top = new RenameNode((makePlan(fromClause.
+        		getSelectClause())), fromClause.getResultName());
+        	if (predicate != null) {
+        		top = new SimpleFilterNode(top, predicate);
+        	}
+    	}
+    	else {
+    		top = new NestedLoopsJoinNode(processFromClause(fromClause.getLeftChild(), 
+    			null), processFromClause(fromClause.getRightChild(), null), 
+    			fromClause.getJoinType(), fromClause.getPreparedJoinExpr());
+    		if (predicate != null) {
+        		top = new SimpleFilterNode(top, predicate);
+        	}
+    	}
+		return top;
     }
 
 

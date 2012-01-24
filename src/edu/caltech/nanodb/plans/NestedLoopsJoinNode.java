@@ -191,8 +191,31 @@ public class NestedLoopsJoinNode extends ThetaJoinNode {
      *         <tt>false</tt> if no more pairs of tuples are available to join.
      */
     private boolean getTuplesToJoin() throws IOException {
-        // TODO:  Implement
-        return false;
+        if (leftTuple == null) {
+        	Tuple tempLeft = leftChild.getNextTuple();
+        	if (tempLeft == null) {
+        		return false;
+        	}
+        	leftTuple = tempLeft;
+        }
+    	Tuple tempRight = rightChild.getNextTuple();
+    	if (tempRight == null) {
+    		if (rightTuple == null) {
+    			return false;
+    		}
+    		Tuple tempLeft = leftChild.getNextTuple();
+        	if (tempLeft == null) {
+        		return false;
+        	}
+        	leftTuple = tempLeft;
+        	rightChild.initialize();
+        	rightTuple = rightChild.getNextTuple();
+        	return true;
+    	}
+    	else {
+    		rightTuple = tempRight;
+    		return true;
+    	}
     }
 
 

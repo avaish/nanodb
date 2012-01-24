@@ -783,6 +783,17 @@ public class HeapFileTableManager implements TableManager {
     @Override
     public void analyzeTable(TableFileInfo tblFileInfo) throws IOException {
         logger.warn("TODO:  Implement analyzeTable().");
+
+        /* Your implementation will end with lines like these.  You must be
+         * sure to update the TableFileInfo object, and then store the results
+         * back to the header page.
+         *
+        TableStats stats = new TableStats(...);
+        tblFileInfo.setStats(stats);
+
+        DBPage headerPage = storageManager.loadDBPage(dbFile, 0);
+        HeaderPage.setTableStats(headerPage, tblFileInfo);
+        */
     }
 
 

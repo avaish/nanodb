@@ -68,7 +68,8 @@ public class SimplePlanner implements Planner {
     	return top;
     }
     
-    private PlanNode processFromClause(FromClause fromClause, Expression predicate) throws IOException {
+    private PlanNode processFromClause(FromClause fromClause, Expression predicate) 
+    		throws IOException {
     	PlanNode top = null;
     	if (fromClause.isBaseTable()) {
     		if (fromClause.isRenamed()) {

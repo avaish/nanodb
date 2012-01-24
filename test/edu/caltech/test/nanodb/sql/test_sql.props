@@ -24,3 +24,31 @@ setup_testSelectProject = \
     INSERT INTO test_select_project VALUES ( 4,  'green', NULL ); \
     INSERT INTO test_select_project VALUES ( 5, 'yellow',   40 ); \
     INSERT INTO test_select_project VALUES ( 6,   'blue',   50 );
+
+# This setup SQL is used for the joins test case
+setup_testSimpleJoins = \
+    CREATE TABLE t1 ( \
+        id INTEGER, \
+        greek VARCHAR(10) \
+    ); \
+    CREATE TABLE t2 ( \
+        id INTEGER, \
+        letter CHAR(1) \
+    ); \
+    CREATE TABLE t3 ( \
+        id INTEGER \
+    ); \
+    CREATE TABLE t4 ( \
+        id INTEGER \
+    ); \
+    INSERT INTO t1 VALUES (1, 'alpha'); \
+    INSERT INTO t1 VALUES (2, 'beta'); \
+    INSERT INTO t1 VALUES (3, 'gamma'); \
+    INSERT INTO t1 VALUES (4, 'delta'); \
+    INSERT INTO t1 VALUES (null, 'lorem'); \
+    INSERT INTO t1 VALUES (null, 'ipsum'); \
+    INSERT INTO t2 VALUES (1, 'A'); \
+    INSERT INTO t2 VALUES (2, 'B'); \
+    INSERT INTO t2 VALUES (3, 'C'); \
+    INSERT INTO t2 VALUES (4, 'D'); \
+    INSERT INTO t2 VALUES (null, '9');

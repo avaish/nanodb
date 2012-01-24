@@ -216,6 +216,7 @@ public class NestedLoopsJoinNode extends ThetaJoinNode {
         if (leftTuple == null) {
         	Tuple tempLeft = leftChild.getNextTuple();
         	if (tempLeft == null) {
+        		done = true;
         		return false;
         	}
         	leftTuple = tempLeft;
@@ -223,7 +224,8 @@ public class NestedLoopsJoinNode extends ThetaJoinNode {
         }
     	Tuple tempRight = rightChild.getNextTuple();
     	if (tempRight == null) {
-    		if (rightTuple == null) {
+    		if ((rightTuple == null) && (isInnerJoin)) {
+    			done = true;
     			return false;
     		}
     		if (!matched) {
@@ -232,13 +234,13 @@ public class NestedLoopsJoinNode extends ThetaJoinNode {
     		}
     		Tuple tempLeft = leftChild.getNextTuple();
         	if (tempLeft == null) {
+        		done = true;
         		return false;
         	}
         	leftTuple = tempLeft;
         	matched = false || isInnerJoin;
         	rightChild.initialize();
-        	rightTuple = rightChild.getNextTuple();
-        	return true;
+        	return getTuplesToJoin();
     	}
     	else {
     		rightTuple = tempRight;

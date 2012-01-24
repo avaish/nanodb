@@ -27,20 +27,20 @@ public class TestSimpleJoins extends SqlTestCase {
      * @throws Exception if any query parsing or execution issues occur.
      */
     public void testNormalTables() throws Throwable {
-    	TupleLiteral[] naturalJoin = {
-    		new TupleLiteral(1, "alpha", 1, "A"),
-    		new TupleLiteral(2, "beta", 2, "B"),
-    		new TupleLiteral(3, "gamma", 3, "C"),
-    		new TupleLiteral(4, "delta", 4, "D")
-    	};
-    	
-    	TupleLiteral[] joinOn = {
-        	new TupleLiteral(1, "alpha", 2, "B"),
-        	new TupleLiteral(2, "beta", 3, "C"),
-        	new TupleLiteral(3, "gamma", 4, "D")
+        TupleLiteral[] naturalJoin = {
+            new TupleLiteral(1, "alpha", 1, "A"),
+            new TupleLiteral(2, "beta", 2, "B"),
+            new TupleLiteral(3, "gamma", 3, "C"),
+            new TupleLiteral(4, "delta", 4, "D")
         };
-    	
-    	TupleLiteral[] crossJoin = {
+        
+        TupleLiteral[] joinOn = {
+            new TupleLiteral(1, "alpha", 2, "B"),
+            new TupleLiteral(2, "beta", 3, "C"),
+            new TupleLiteral(3, "gamma", 4, "D")
+        };
+        
+        TupleLiteral[] crossJoin = {
             new TupleLiteral(1, "alpha", 1, "A"),
             new TupleLiteral(1, "alpha", 2, "B"),
             new TupleLiteral(1, "alpha", 3, "C"),
@@ -72,28 +72,28 @@ public class TestSimpleJoins extends SqlTestCase {
             new TupleLiteral(null, "ipsum", 4, "D"),
             new TupleLiteral(null, "ipsum", null, "9")
         };
-    	
-    	TupleLiteral[] leftJoin = {
-        	new TupleLiteral(1, "alpha", 1, "A"),
-        	new TupleLiteral(2, "beta", 2, "B"),
-        	new TupleLiteral(3, "gamma", 3, "C"),
-        	new TupleLiteral(4, "delta", 4, "D"),
-        	new TupleLiteral(null, "lorem", null, null),
-        	new TupleLiteral(null, "ipsum", null, null)
+        
+        TupleLiteral[] leftJoin = {
+            new TupleLiteral(1, "alpha", 1, "A"),
+            new TupleLiteral(2, "beta", 2, "B"),
+            new TupleLiteral(3, "gamma", 3, "C"),
+            new TupleLiteral(4, "delta", 4, "D"),
+            new TupleLiteral(null, "lorem", null, null),
+            new TupleLiteral(null, "ipsum", null, null)
         };
-    	
-    	TupleLiteral[] rightJoin = {
+        
+        TupleLiteral[] rightJoin = {
             new TupleLiteral(1, "alpha", 1, "A"),
             new TupleLiteral(2, "beta", 2, "B"),
             new TupleLiteral(3, "gamma", 3, "C"),
             new TupleLiteral(4, "delta", 4, "D"),
             new TupleLiteral(null, null, null, "9")
         };
-    	
-    	TupleLiteral[] noJoin = {
+        
+        TupleLiteral[] noJoin = {
         };
-    	
-    	TupleLiteral[] multipleJoin = {
+        
+        TupleLiteral[] multipleJoin = {
             new TupleLiteral(1, "alpha", 2, "B"),
             new TupleLiteral(1, "alpha", 3, "C"),
             new TupleLiteral(1, "alpha", 4, "D"),
@@ -101,19 +101,19 @@ public class TestSimpleJoins extends SqlTestCase {
             new TupleLiteral(2, "beta", 4, "D"),
             new TupleLiteral(3, "gamma", 4, "D")
         };
-    	
-    	CommandResult result;
-    	
-    	result = NanoDBServer.doCommand(
-    		"SELECT * FROM t1 NATURAL JOIN t2", true);
-    	assert checkUnorderedResults(naturalJoin, result);
-    	
-    	result = NanoDBServer.doCommand(
-        	"SELECT * FROM t1 JOIN t2 USING (id)", true);
+        
+        CommandResult result;
+        
+        result = NanoDBServer.doCommand(
+            "SELECT * FROM t1 NATURAL JOIN t2", true);
         assert checkUnorderedResults(naturalJoin, result);
         
         result = NanoDBServer.doCommand(
-        	"SELECT * FROM t1 JOIN t2 ON t1.id = t2.id", true);
+            "SELECT * FROM t1 JOIN t2 USING (id)", true);
+        assert checkUnorderedResults(naturalJoin, result);
+        
+        result = NanoDBServer.doCommand(
+            "SELECT * FROM t1 JOIN t2 ON t1.id = t2.id", true);
         assert checkUnorderedResults(naturalJoin, result);
         
         result = NanoDBServer.doCommand(
@@ -123,23 +123,23 @@ public class TestSimpleJoins extends SqlTestCase {
         result = NanoDBServer.doCommand(
             "SELECT * FROM t1 JOIN t2 ON t1.id = t2.id * 10", true);
         assert checkUnorderedResults(noJoin, result);
-        	
+            
         result = NanoDBServer.doCommand(
             "SELECT * FROM t1 JOIN t2 ON t1.id = t2.id - 1", true);
         assert checkUnorderedResults(joinOn, result);
         
         result = NanoDBServer.doCommand(
-    		"SELECT * FROM t1, t2", true);
-    	assert checkUnorderedResults(crossJoin, result);
-    	
-    	result = NanoDBServer.doCommand(
-        	"SELECT * FROM t1, t2 WHERE t1.id = t2.id", true);
+            "SELECT * FROM t1, t2", true);
+        assert checkUnorderedResults(crossJoin, result);
+        
+        result = NanoDBServer.doCommand(
+            "SELECT * FROM t1, t2 WHERE t1.id = t2.id", true);
         assert checkUnorderedResults(naturalJoin, result);
         
         result = NanoDBServer.doCommand(
-        	"SELECT * FROM t1, t2 WHERE t1.id = t2.id - 1", true);
+            "SELECT * FROM t1, t2 WHERE t1.id = t2.id - 1", true);
         assert checkUnorderedResults(joinOn, result);
-        	
+            
         result = NanoDBServer.doCommand(
             "SELECT * FROM t1 LEFT JOIN t2 ON t1.id = t2.id", true);
         assert checkUnorderedResults(leftJoin, result);
@@ -155,30 +155,30 @@ public class TestSimpleJoins extends SqlTestCase {
      * @throws Exception if any query parsing or execution issues occur.
      */
     public void testOneEmptyTable() throws Throwable {
-    	TupleLiteral[] leftJoin = {
-        	new TupleLiteral(1, "alpha", null),
-        	new TupleLiteral(2, "beta", null),
-        	new TupleLiteral(3, "gamma", null),
-        	new TupleLiteral(4, "delta", null),
-        	new TupleLiteral(null, "lorem", null),
-        	new TupleLiteral(null, "ipsum", null)
+        TupleLiteral[] leftJoin = {
+            new TupleLiteral(1, "alpha", null),
+            new TupleLiteral(2, "beta", null),
+            new TupleLiteral(3, "gamma", null),
+            new TupleLiteral(4, "delta", null),
+            new TupleLiteral(null, "lorem", null),
+            new TupleLiteral(null, "ipsum", null)
         };
-    	
-    	TupleLiteral[] noJoin = {
+        
+        TupleLiteral[] noJoin = {
         };
-    	
-    	CommandResult result;
-    	
-    	result = NanoDBServer.doCommand(
-    		"SELECT * FROM t1 NATURAL JOIN t3", true);
-    	assert checkUnorderedResults(noJoin, result);
-    	
-    	result = NanoDBServer.doCommand(
-        	"SELECT * FROM t3 NATURAL JOIN t1", true);
+        
+        CommandResult result;
+        
+        result = NanoDBServer.doCommand(
+            "SELECT * FROM t1 NATURAL JOIN t3", true);
         assert checkUnorderedResults(noJoin, result);
-    	
-    	result = NanoDBServer.doCommand(
-        	"SELECT * FROM t1 JOIN t3 USING (id)", true);
+        
+        result = NanoDBServer.doCommand(
+            "SELECT * FROM t3 NATURAL JOIN t1", true);
+        assert checkUnorderedResults(noJoin, result);
+        
+        result = NanoDBServer.doCommand(
+            "SELECT * FROM t1 JOIN t3 USING (id)", true);
         assert checkUnorderedResults(noJoin, result);
         
         result = NanoDBServer.doCommand(
@@ -186,7 +186,7 @@ public class TestSimpleJoins extends SqlTestCase {
         assert checkUnorderedResults(noJoin, result);
         
         result = NanoDBServer.doCommand(
-        	"SELECT * FROM t1 JOIN t3 ON t1.id = t3.id", true);
+            "SELECT * FROM t1 JOIN t3 ON t1.id = t3.id", true);
         assert checkUnorderedResults(noJoin, result);
         
         result = NanoDBServer.doCommand(
@@ -194,21 +194,21 @@ public class TestSimpleJoins extends SqlTestCase {
         assert checkUnorderedResults(noJoin, result);
         
         result = NanoDBServer.doCommand(
-    		"SELECT * FROM t1, t3", true);
-    	assert checkUnorderedResults(noJoin, result);
-    	
-    	result = NanoDBServer.doCommand(
-        	"SELECT * FROM t3, t1", true);
-        assert checkUnorderedResults(noJoin, result);
-    	
-    	result = NanoDBServer.doCommand(
-        	"SELECT * FROM t1, t3 WHERE t1.id = t3.id", true);
+            "SELECT * FROM t1, t3", true);
         assert checkUnorderedResults(noJoin, result);
         
         result = NanoDBServer.doCommand(
-        	"SELECT * FROM t3, t1 WHERE t1.id = t3.id", true);
+            "SELECT * FROM t3, t1", true);
         assert checkUnorderedResults(noJoin, result);
-        	
+        
+        result = NanoDBServer.doCommand(
+            "SELECT * FROM t1, t3 WHERE t1.id = t3.id", true);
+        assert checkUnorderedResults(noJoin, result);
+        
+        result = NanoDBServer.doCommand(
+            "SELECT * FROM t3, t1 WHERE t1.id = t3.id", true);
+        assert checkUnorderedResults(noJoin, result);
+            
         result = NanoDBServer.doCommand(
             "SELECT * FROM t1 LEFT JOIN t3 ON t1.id = t3.id", true);
         assert checkUnorderedResults(leftJoin, result);
@@ -224,13 +224,13 @@ public class TestSimpleJoins extends SqlTestCase {
      * @throws Exception if any query parsing or execution issues occur.
      */
     public void testTwoEmptyTables() throws Throwable {
-    	TupleLiteral[] noJoin = {
+        TupleLiteral[] noJoin = {
         };
-    	
-    	CommandResult result;
-    	
-    	result = NanoDBServer.doCommand(
-        	"SELECT * FROM t3 NATURAL JOIN t4", true);
+        
+        CommandResult result;
+        
+        result = NanoDBServer.doCommand(
+            "SELECT * FROM t3 NATURAL JOIN t4", true);
         assert checkUnorderedResults(noJoin, result);
         
         result = NanoDBServer.doCommand(
@@ -240,15 +240,15 @@ public class TestSimpleJoins extends SqlTestCase {
         result = NanoDBServer.doCommand(
             "SELECT * FROM t3 JOIN t4 ON t4.id = t3.id", true);
         assert checkUnorderedResults(noJoin, result);
-    	
-    	result = NanoDBServer.doCommand(
-        	"SELECT * FROM t3, t4", true);
+        
+        result = NanoDBServer.doCommand(
+            "SELECT * FROM t3, t4", true);
         assert checkUnorderedResults(noJoin, result);
         
         result = NanoDBServer.doCommand(
-        	"SELECT * FROM t3, t4 WHERE t4.id = t3.id", true);
+            "SELECT * FROM t3, t4 WHERE t4.id = t3.id", true);
         assert checkUnorderedResults(noJoin, result);
-        	
+            
         result = NanoDBServer.doCommand(
             "SELECT * FROM t4 LEFT JOIN t3 ON t4.id = t3.id", true);
         assert checkUnorderedResults(noJoin, result);

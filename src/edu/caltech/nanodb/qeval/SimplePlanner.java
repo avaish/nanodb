@@ -47,62 +47,76 @@ public class SimplePlanner implements Planner {
      *         load schema and indexing information.
      */
     public PlanNode makePlan(SelectClause selClause) throws IOException {
-    	PlanNode top = null;
-    	
-    	top = processFromClause(selClause.getFromClause(), selClause.getWhereExpr());
-    	
-    	if ((selClause.getOrderByExprs() != null) && 
-    		(!selClause.getOrderByExprs().isEmpty())) {
-    		SortNode sn = new SortNode(top, selClause.getOrderByExprs());
-    		top = sn;
-    	}
-    	if (selClause.isTrivialProject()) {
-    		top.prepare();
-    		return top;
-    	}
-    	else {
-    		ProjectNode pn = new ProjectNode(top, selClause.getSelectValues());
-    		top = pn;
-    	}
-    	top.prepare();
-    	return top;
+        PlanNode top = null;
+        
+        // This gets the nodes needed to get the tuples of the from clause, and
+        // additionally applies the where predicate when needed.
+        top = processFromClause(selClause.getFromClause(), selClause.getWhereExpr());
+        
+        // Makes the results ordered, if needed.
+        if ((selClause.getOrderByExprs() != null) && 
+            (!selClause.getOrderByExprs().isEmpty())) {
+            SortNode sn = new SortNode(top, selClause.getOrderByExprs());
+            top = sn;
+        }
+        
+        // Projects the result, if needed.
+        if (selClause.isTrivialProject()) {
+            top.prepare();
+            return top;
+        }
+        else {
+            ProjectNode pn = new ProjectNode(top, selClause.getSelectValues());
+            top = pn;
+        }
+        top.prepare();
+        return top;
     }
     
+    /**
+     * Process the FromClause, whether it's a base table, derived table, or
+     * join expression. Works recursively for joins.
+     * 
+     * @param fromClause clause to be processed
+     * @param predicate optional predicate to filter results
+     * @return the top PlanNode needed to assemble fromClause
+     * @throws IOException
+     */
     private PlanNode processFromClause(FromClause fromClause, Expression predicate) 
-    		throws IOException {
-    	PlanNode top = null;
-    	if (fromClause.isBaseTable()) {
-    		if (fromClause.isRenamed()) {
-    			FileScanNode fs =  new FileScanNode(StorageManager.
-        	    	getInstance().openTable(fromClause. getTableName()), null);
-        	    top = new RenameNode(fs, fromClause.getResultName());
-        	    if (predicate != null) {
-            		top = new SimpleFilterNode(top, predicate);
-            	}
-    		}
-    		else {
-    			FileScanNode fs =  new FileScanNode(StorageManager.
-    				getInstance().openTable(fromClause.
-        	    	getTableName()), predicate);
-        	    top = fs;
-    		}
-    	}
-    	else if (fromClause.isDerivedTable()) {
-    		top = new RenameNode((makePlan(fromClause.
-        		getSelectClause())), fromClause.getResultName());
-        	if (predicate != null) {
-        		top = new SimpleFilterNode(top, predicate);
-        	}
-    	}
-    	else {
-    		top = new NestedLoopsJoinNode(processFromClause(fromClause.getLeftChild(), 
-    			null), processFromClause(fromClause.getRightChild(), null), 
-    			fromClause.getJoinType(), fromClause.getPreparedJoinExpr());
-    		if (predicate != null) {
-        		top = new SimpleFilterNode(top, predicate);
-        	}
-    	}
-		return top;
+            throws IOException {
+        PlanNode top = null;
+        if (fromClause.isBaseTable()) {
+            if (fromClause.isRenamed()) {
+                FileScanNode fs =  new FileScanNode(StorageManager.
+                    getInstance().openTable(fromClause. getTableName()), null);
+                top = new RenameNode(fs, fromClause.getResultName());
+                if (predicate != null) {
+                    top = new SimpleFilterNode(top, predicate);
+                }
+            }
+            else {
+                FileScanNode fs =  new FileScanNode(StorageManager.
+                    getInstance().openTable(fromClause.
+                    getTableName()), predicate);
+                top = fs;
+            }
+        }
+        else if (fromClause.isDerivedTable()) {
+            top = new RenameNode((makePlan(fromClause.
+                getSelectClause())), fromClause.getResultName());
+            if (predicate != null) {
+                top = new SimpleFilterNode(top, predicate);
+            }
+        }
+        else {
+            top = new NestedLoopsJoinNode(processFromClause(fromClause.getLeftChild(), 
+                null), processFromClause(fromClause.getRightChild(), null), 
+                fromClause.getJoinType(), fromClause.getPreparedJoinExpr());
+            if (predicate != null) {
+                top = new SimpleFilterNode(top, predicate);
+            }
+        }
+        return top;
     }
 
 

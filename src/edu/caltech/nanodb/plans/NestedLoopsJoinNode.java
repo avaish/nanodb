@@ -47,12 +47,12 @@ public class NestedLoopsJoinNode extends ThetaJoinNode {
         super(leftChild, rightChild, joinType, predicate);
         
         if (joinType != JoinType.CROSS && joinType != JoinType.INNER)
-        	isInnerJoin = false;
+            isInnerJoin = false;
         else
-        	isInnerJoin = true;
+            isInnerJoin = true;
         
         if (joinType == JoinType.RIGHT_OUTER)
-        	super.swap();
+            super.swap();
     }
 
 
@@ -196,7 +196,7 @@ public class NestedLoopsJoinNode extends ThetaJoinNode {
 
         while (getTuplesToJoin()) {
             if (canJoinTuples() || rightTuple.equals(NULL_TUPLE)) {
-            	matched = true || isInnerJoin;
+                matched = true || isInnerJoin;
                 return joinTuples(leftTuple, rightTuple);
             }
         }
@@ -213,39 +213,39 @@ public class NestedLoopsJoinNode extends ThetaJoinNode {
      *         <tt>false</tt> if no more pairs of tuples are available to join.
      */
     private boolean getTuplesToJoin() throws IOException {
-        if (leftTuple == null) {
-        	Tuple tempLeft = leftChild.getNextTuple();
-        	if (tempLeft == null) {
-        		done = true;
-        		return false;
-        	}
-        	leftTuple = tempLeft;
-        	matched = false || isInnerJoin;
+        if (leftTuple == null) {    // if the left tuple has not been defined...
+            Tuple tempLeft = leftChild.getNextTuple();
+            if (tempLeft == null) {    // ... and there is no left tuple...
+                done = true;    // ... there is no left table, and we're done
+                return false;
+            }
+            leftTuple = tempLeft;   // ... otherwise get the first left tuple
+            matched = false || isInnerJoin; // set matched to false
         }
-    	Tuple tempRight = rightChild.getNextTuple();
-    	if (tempRight == null) {
-    		if ((rightTuple == null) && (isInnerJoin)) {
-    			done = true;
-    			return false;
-    		}
-    		if (!matched) {
-    			rightTuple = NULL_TUPLE;
-    			return true;
-    		}
-    		Tuple tempLeft = leftChild.getNextTuple();
-        	if (tempLeft == null) {
-        		done = true;
-        		return false;
-        	}
-        	leftTuple = tempLeft;
-        	matched = false || isInnerJoin;
-        	rightChild.initialize();
-        	return getTuplesToJoin();
-    	}
-    	else {
-    		rightTuple = tempRight;
-    		return true;
-    	}
+        Tuple tempRight = rightChild.getNextTuple();  // get the next right tuple
+        if (tempRight == null) {
+            if ((rightTuple == null) && (isInnerJoin)) {
+                done = true;  // if we're doing an inner join and there's no
+                return false; // left table, we're done
+            }
+            if (!matched) {  // we didn't match anything...
+                rightTuple = NULL_TUPLE;  // ... so the right tuple becomes a null
+                return true;
+            }
+            Tuple tempLeft = leftChild.getNextTuple(); // all done with inner loop!
+            if (tempLeft == null) {
+                done = true;  // all done with left table!
+                return false;
+            }
+            leftTuple = tempLeft;
+            matched = false || isInnerJoin;
+            rightChild.initialize();
+            return getTuplesToJoin();  // restart inner loop
+        }
+        else {
+            rightTuple = tempRight;  // got two tuples to join!
+            return true;
+        }
     }
 
 

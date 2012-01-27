@@ -1,6 +1,8 @@
 package edu.caltech.nanodb.storage.heapfile;
 
 
+import java.io.IOException;
+
 import org.apache.log4j.Logger;
 
 import edu.caltech.nanodb.storage.DBPage;
@@ -50,9 +52,11 @@ public class DataPage {
      * pages at this point.
      *
      * @param dbPage the data page to initialize
+     * @throws IOException 
      */
-    public static void initNewPage(DBPage dbPage) {
+    public static void initNewPage(DBPage dbPage) throws IOException {
         setNumSlots(dbPage, 0);
+        setPointer(dbPage, dbPage.getDBFile().getNumPages() + 1);
     }
 
 
@@ -240,9 +244,7 @@ public class DataPage {
      *                  pages are like DataPages so it's ok.
      */
     public static void setPointer(DBPage dbPage, int pointer) {
-        PageWriter pageWriter = new PageWriter(dbPage);
-        pageWriter.setPosition(dbPage.getPageSize() - 4);
-        pageWriter.writeInt(pointer);
+        dbPage.writeInt(dbPage.getPageSize() - 4, pointer);
         logger.debug("Created pointer to page " + pointer + ".");
     }
     
@@ -265,9 +267,7 @@ public class DataPage {
      *                  pages are like DataPages so it's ok.
      */
     public static int getPointer(DBPage dbPage) {
-        PageReader pageReader = new PageReader(dbPage);
-        pageReader.setPosition(dbPage.getPageSize() - 4);
-        return pageReader.readInt();
+        return dbPage.readInt(dbPage.getPageSize() - 4);
     }
 
 

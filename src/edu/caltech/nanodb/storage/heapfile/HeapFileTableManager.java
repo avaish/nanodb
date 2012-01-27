@@ -738,7 +738,6 @@ public class HeapFileTableManager implements TableManager {
             logger.debug("Creating new page " + pageNo + " to store new tuple.");
             dbPage = storageManager.loadDBPage(dbFile, pageNo, true);
             DataPage.initNewPage(dbPage);
-            DataPage.setPointer(dbPage, pageNo + 1);
         }
 
         int slot = DataPage.allocNewTuple(dbPage, tupSize);

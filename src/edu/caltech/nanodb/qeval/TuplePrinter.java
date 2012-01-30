@@ -35,12 +35,12 @@ public class TuplePrinter implements TupleProcessor {
 
             // Only print out the table name if there are multiple columns
             // with this column name.
-            // if (schema.numColumnsWithName(colName) > 1 && tblName != null)
-            //     out.print(tblName + '.');
+            if (schema.numColumnsWithName(colName) > 1 && tblName != null)
+                out.print(tblName + '.');
 
             // If table name is specified, always print it out.
-            if (tblName != null)
-                out.print(tblName + '.');
+            // if (tblName != null)
+            //     out.print(tblName + '.');
 
             out.print(colName);
         }

@@ -38,7 +38,7 @@ public class NestedLoopsJoinNode extends ThetaJoinNode {
     private boolean isInnerJoin;
     
     /** Null tuple for right schema. */
-    private static Tuple NULL_TUPLE;
+    private Tuple NULL_TUPLE;
 
 
     public NestedLoopsJoinNode(PlanNode leftChild, PlanNode rightChild,

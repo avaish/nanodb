@@ -87,17 +87,14 @@ public class SimplePlanner implements Planner {
         PlanNode top = null;
         if (fromClause.isBaseTable()) {
             if (fromClause.isRenamed()) {
-                FileScanNode fs =  new FileScanNode(StorageManager.
-                    getInstance().openTable(fromClause. getTableName()), null);
+                SelectNode fs = makeSimpleSelect(fromClause.getTableName(), null);
                 top = new RenameNode(fs, fromClause.getResultName());
                 if (predicate != null) {
                     top = new SimpleFilterNode(top, predicate);
                 }
             }
             else {
-                FileScanNode fs =  new FileScanNode(StorageManager.
-                    getInstance().openTable(fromClause.
-                    getTableName()), predicate);
+                SelectNode fs = makeSimpleSelect(fromClause.getTableName(), predicate);
                 top = fs;
             }
         }

@@ -114,9 +114,16 @@ public class SimpleFilterNode extends SelectNode {
         // (Technically we should update the statistics based on the predicate.)
         schema = leftChild.getSchema();
         stats = leftChild.getStats();
-
-        // TODO:  Compute the plan-node's cost.
-        cost = null;
+        
+        float numTuples = leftChild.cost.numTuples;
+        if (predicate != null)
+            numTuples *= SelectivityEstimator.estimateSelectivity
+                (predicate, schema, stats);
+        float tupleSize = leftChild.cost.tupleSize;
+        float cpuCost = leftChild.cost.cpuCost + leftChild.cost.numTuples;
+        long numBlockIOs = leftChild.cost.numBlockIOs;
+        
+        cost = new PlanCost(numTuples, tupleSize, cpuCost, numBlockIOs);
     }
 
 

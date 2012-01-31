@@ -146,18 +146,27 @@ public class SelectivityEstimator {
         Schema exprSchema, ArrayList<ColumnStats> stats) {
 
         float selectivity = 1.0f;
+        int numExpr = bool.getNumTerms();
 
         switch (bool.getType()) {
         case AND_EXPR:
-            // TODO:  Compute selectivity of AND expression.
+            for (int i = 0; i < numExpr; i++) {
+                selectivity *= estimateSelectivity(
+                    bool.getTerm(i), exprSchema, stats);
+            }
             break;
 
         case OR_EXPR:
-            // TODO:  Compute selectivity of OR expression.
+            for (int i = 0; i < numExpr; i++) {
+                selectivity *= (1.0f - estimateSelectivity(
+                    bool.getTerm(i), exprSchema, stats));
+                selectivity = 1.0f - selectivity;
+            }
             break;
 
         case NOT_EXPR:
-            // TODO:  Compute selectivity of NOT expression.
+            selectivity = 1.0f - estimateSelectivity(
+                bool.getTerm(0), exprSchema, stats);
             break;
 
         default:
@@ -269,11 +278,11 @@ public class SelectivityEstimator {
         case NOT_EQUALS:
             // Compute the equality value.  Then, if inequality, invert the
             // result.
-
-            // TODO:  Compute the selectivity.  Note that the ColumnStats type
-            //        will return special values to indicate "unknown" stats;
-            //        your code should detect when this is the case, and fall
-            //        back on the default selectivity.
+            if (colStats.getNumUniqueValues() > 0) {
+                selectivity = 1.0f / colStats.getNumUniqueValues();
+                if (compType == CompareOperator.Type.NOT_EQUALS)
+                    selectivity = 1.0f - selectivity;
+            }
 
             break;
 
@@ -287,10 +296,11 @@ public class SelectivityEstimator {
 
             if (typeSupportsCompareEstimates(sqlType) &&
                 colStats.hasDifferentMinMaxValues()) {
-
-                // TODO:  Compute the selectivity.  The if-condition ensures
-                //        that you will only compute selectivities if the type
-                //        supports it, and if there are valid stats.
+                selectivity = computeRatio(value, colStats.getMaxValue(),
+                    colStats.getMinValue(), colStats.getMaxValue());
+                
+                if (compType == CompareOperator.Type.LESS_THAN)
+                    selectivity = 1.0f - selectivity;
             }
 
             break;
@@ -305,9 +315,11 @@ public class SelectivityEstimator {
 
             if (typeSupportsCompareEstimates(sqlType) &&
                 colStats.hasDifferentMinMaxValues()) {
-
-                // TODO:  Compute the selectivity.  Watch out for cut-and-paste
-                //        bugs...
+                selectivity = computeRatio(colStats.getMinValue(), value,
+                    colStats.getMinValue(), colStats.getMaxValue());
+                
+                if (compType == CompareOperator.Type.GREATER_THAN)
+                    selectivity = 1.0f - selectivity;
             }
 
             break;
@@ -360,10 +372,14 @@ public class SelectivityEstimator {
             // Compute the equality value.  Then, if inequality, invert the
             // result.
 
-            // TODO:  Compute the selectivity.  Note that the ColumnStats type
-            //        will return special values to indicate "unknown" stats;
-            //        your code should detect when this is the case, and fall
-            //        back on the default selectivity.
+            if ((colOneStats.getNumUniqueValues() > 0) && 
+                (colTwoStats.getNumUniqueValues() > 0)) {
+                selectivity = 1.0f / Math.max(colOneStats.getNumUniqueValues(), 
+                    colTwoStats.getNumUniqueValues());
+                
+                if (compType == CompareOperator.Type.NOT_EQUALS)
+                    selectivity = 1.0f - selectivity;
+            }
         }
 
         return selectivity;

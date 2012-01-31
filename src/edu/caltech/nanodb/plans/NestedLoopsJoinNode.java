@@ -168,9 +168,17 @@ public class NestedLoopsJoinNode extends ThetaJoinNode {
         prepareSchemaStats();
         
         NULL_TUPLE = new TupleLiteral(rightSchema.numColumns());
-
-        // TODO:  Implement the rest
-        cost = null;
+        
+        float numTuples = rightChild.cost.numTuples * leftChild.cost.numTuples;
+        if (predicate != null)
+            numTuples *= SelectivityEstimator.estimateSelectivity
+                (predicate, schema, stats);
+        float tupleSize = rightChild.cost.tupleSize + leftChild.cost.tupleSize;
+        float cpuCost = rightChild.cost.cpuCost + leftChild.cost.cpuCost + 
+            rightChild.cost.numTuples * leftChild.cost.numTuples;
+        long numBlockIOs = rightChild.cost.numBlockIOs + leftChild.cost.numBlockIOs;
+        
+        cost = new PlanCost(numTuples, tupleSize, cpuCost, numBlockIOs);
     }
 
 

@@ -164,6 +164,7 @@ public class FileScanNode extends SelectNode {
         TableStats tableStats = tblFileInfo.getStats();
         stats = tableStats.getAllColumnStats();
         
+        // update plan costs
         float numTuples = tableStats.numTuples;
         if (predicate != null)
             numTuples *= SelectivityEstimator.estimateSelectivity

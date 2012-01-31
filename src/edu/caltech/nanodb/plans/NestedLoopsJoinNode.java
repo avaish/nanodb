@@ -169,6 +169,7 @@ public class NestedLoopsJoinNode extends ThetaJoinNode {
         
         NULL_TUPLE = new TupleLiteral(rightSchema.numColumns());
         
+        // update plan costs
         float numTuples = rightChild.cost.numTuples * leftChild.cost.numTuples;
         if (predicate != null)
             numTuples *= SelectivityEstimator.estimateSelectivity

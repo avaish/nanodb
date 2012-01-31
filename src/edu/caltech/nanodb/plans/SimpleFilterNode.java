@@ -115,6 +115,7 @@ public class SimpleFilterNode extends SelectNode {
         schema = leftChild.getSchema();
         stats = leftChild.getStats();
         
+        // update plan costs
         float numTuples = leftChild.cost.numTuples;
         if (predicate != null)
             numTuples *= SelectivityEstimator.estimateSelectivity

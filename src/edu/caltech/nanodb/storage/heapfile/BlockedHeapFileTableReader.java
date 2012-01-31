@@ -89,12 +89,16 @@ public class BlockedHeapFileTableReader implements BlockedTableReader {
     @Override
     public Tuple getFirstTupleInPage(TableFileInfo tblFileInfo, DBPage dbPage) {
         int numSlots = DataPage.getNumSlots(dbPage);
+        
+        // find the first filled slot in page
         for (int iSlot = 0; iSlot < numSlots; iSlot++) {
             int offset = DataPage.getSlotValue(dbPage, iSlot);
             if (offset == DataPage.EMPTY_SLOT)
                 continue;
             return new HeapFilePageTuple(tblFileInfo, dbPage, iSlot, offset);
         }
+        
+        // no tuples in page.
         return null;
     }
 
@@ -113,6 +117,7 @@ public class BlockedHeapFileTableReader implements BlockedTableReader {
         int nextSlot = ptup.getSlot() + 1;
         int numSlots = DataPage.getNumSlots(dbPage);
         
+        // find the next filled slot in the page
         while (nextSlot < numSlots) {
             int nextOffset = DataPage.getSlotValue(dbPage, nextSlot);
             if (nextOffset != DataPage.EMPTY_SLOT) {
@@ -123,6 +128,7 @@ public class BlockedHeapFileTableReader implements BlockedTableReader {
             nextSlot++;
         }
         
+        // no more tuples in page.
         return null;
     }
 }

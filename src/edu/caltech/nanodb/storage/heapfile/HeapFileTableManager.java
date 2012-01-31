@@ -842,6 +842,7 @@ public class HeapFileTableManager implements TableManager {
         
         DBPage headerPage = storageManager.loadDBPage(tblFileInfo.getDBFile(), 0);
         
+        // The table statistics, nicely initialized.
         int numDataPages = 0;
         int numTuples = 0;
         float totalTupleSize = 0;
@@ -851,6 +852,7 @@ public class HeapFileTableManager implements TableManager {
         ArrayList<ColumnStatsCollector> collectors = 
             new ArrayList<ColumnStatsCollector>();
         
+        // Setting up the column stat collectors for each column...
         for (ColumnInfo c : tblFileInfo.getSchema().getColumnInfos()) {
             ColumnStatsCollector col = new ColumnStatsCollector(
                 c.getType().getBaseType());
@@ -861,11 +863,15 @@ public class HeapFileTableManager implements TableManager {
         
         DBPage nextBlock = reader.getFirstDataPage(tblFileInfo);
         
+        // for each data block in the table file...
         while (nextBlock != null) {
+            // update table stats
             numDataPages++;
             Tuple nextTuple = reader.getFirstTupleInPage(tblFileInfo, nextBlock);
             
+            // for each tuple in the current data block...
             while (nextTuple != null) {
+                // update tuple stats
                 numTuples++;
                 int tupleSize = PageTuple.getTupleStorageSize(
                     tblFileInfo.getSchema().getColumnInfos(), nextTuple);
@@ -879,7 +885,9 @@ public class HeapFileTableManager implements TableManager {
                     minTupleSize = tupleSize;
                 }
                 
+                // for each column in the current tuple
                 for (int i = 0; i < nextTuple.getColumnCount(); i++) {
+                    // update column stats
                     collectors.get(i).addValue(nextTuple.getColumnValue(i));
                 }
                 
@@ -890,6 +898,7 @@ public class HeapFileTableManager implements TableManager {
             nextBlock = reader.getNextDataPage(tblFileInfo, nextBlock);
         }
         
+        // clean up all the stats for insertion.
         float avgTupleSize = 0;
         
         if (numTuples != 0)
@@ -901,6 +910,7 @@ public class HeapFileTableManager implements TableManager {
             colStats.add(c.getColumnStats());
         }
         
+        // update table stats in table file and header page.
         TableStats stats = new TableStats(numDataPages, numTuples, avgTupleSize, 
             minTupleSize, maxTupleSize, colStats);
         

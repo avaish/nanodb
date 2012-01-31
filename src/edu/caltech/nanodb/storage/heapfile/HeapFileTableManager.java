@@ -839,18 +839,73 @@ public class HeapFileTableManager implements TableManager {
     // Copy interface javadocs.
     @Override
     public void analyzeTable(TableFileInfo tblFileInfo) throws IOException {
-        logger.warn("TODO:  Implement analyzeTable().");
-
-        /* Your implementation will end with lines like these.  You must be
-         * sure to update the TableFileInfo object, and then store the results
-         * back to the header page.
-         *
-        TableStats stats = new TableStats(...);
+        
+        DBPage headerPage = storageManager.loadDBPage(tblFileInfo.getDBFile(), 0);
+        
+        int numDataPages = 0;
+        int numTuples = 0;
+        float totalTupleSize = 0;
+        int maxTupleSize = HeaderPage.getStatMaxTupleSize(headerPage);
+        int minTupleSize = HeaderPage.getStatMinTupleSize(headerPage);
+        
+        ArrayList<ColumnStatsCollector> collectors = 
+            new ArrayList<ColumnStatsCollector>();
+        
+        for (ColumnInfo c : tblFileInfo.getSchema().getColumnInfos()) {
+            ColumnStatsCollector col = new ColumnStatsCollector(
+                c.getType().getBaseType());
+            collectors.add(col);
+        }
+        
+        BlockedTableReader reader = getBlockedReader();
+        
+        DBPage nextBlock = reader.getFirstDataPage(tblFileInfo);
+        
+        while (nextBlock != null) {
+            numDataPages++;
+            Tuple nextTuple = reader.getFirstTupleInPage(tblFileInfo, nextBlock);
+            
+            while (nextTuple != null) {
+                numTuples++;
+                int tupleSize = PageTuple.getTupleStorageSize(
+                    tblFileInfo.getSchema().getColumnInfos(), nextTuple);
+                totalTupleSize += tupleSize;
+                
+                if (tupleSize > maxTupleSize) {
+                    maxTupleSize = tupleSize;
+                }
+                
+                if (tupleSize < minTupleSize) {
+                    minTupleSize = tupleSize;
+                }
+                
+                for (int i = 0; i < nextTuple.getColumnCount(); i++) {
+                    collectors.get(i).addValue(nextTuple.getColumnValue(i));
+                }
+                
+                nextTuple = reader.getNextTupleInPage(tblFileInfo, nextBlock, 
+                    nextTuple);
+            }
+            
+            nextBlock = reader.getNextDataPage(tblFileInfo, nextBlock);
+        }
+        
+        float avgTupleSize = 0;
+        
+        if (numTuples != 0)
+            avgTupleSize = totalTupleSize / numTuples;
+        
+        ArrayList<ColumnStats> colStats = new ArrayList<ColumnStats>();
+        
+        for (ColumnStatsCollector c : collectors) {
+            colStats.add(c.getColumnStats());
+        }
+        
+        TableStats stats = new TableStats(numDataPages, numTuples, avgTupleSize, 
+            minTupleSize, maxTupleSize, colStats);
+        
         tblFileInfo.setStats(stats);
-
-        DBPage headerPage = storageManager.loadDBPage(dbFile, 0);
         HeaderPage.setTableStats(headerPage, tblFileInfo);
-        */
     }
 
 

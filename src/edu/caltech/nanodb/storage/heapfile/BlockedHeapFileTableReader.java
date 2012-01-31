@@ -38,15 +38,22 @@ public class BlockedHeapFileTableReader implements BlockedTableReader {
     // Inherit Javadocs.
     @Override
     public DBPage getFirstDataPage(TableFileInfo tblFileInfo) throws IOException {
-        // TODO:  Implement.
-        return null;
+        try {
+            return storageManager.loadDBPage(tblFileInfo.getDBFile(), 1);
+        }
+        catch (EOFException e) {
+            return null;
+        }
     }
 
 
     // Inherit Javadocs.
     @Override
     public DBPage getLastDataPage(TableFileInfo tblFileInfo) throws IOException {
-        // TODO:  Implement.
+        int pages = tblFileInfo.getDBFile().getNumPages();
+        if (pages > 1) {
+            return storageManager.loadDBPage(tblFileInfo.getDBFile(), pages - 1);
+        }
         return null;
     }
 
@@ -55,9 +62,13 @@ public class BlockedHeapFileTableReader implements BlockedTableReader {
     @Override
     public DBPage getNextDataPage(TableFileInfo tblFileInfo, DBPage dbPage)
         throws IOException {
-
-        // TODO:  Implement.
-        return null;
+        try {
+            return storageManager.loadDBPage(tblFileInfo.getDBFile(), 
+                dbPage.getPageNo() + 1);
+        }
+        catch (EOFException e) {
+            return null;
+        }
     }
 
 
@@ -65,8 +76,11 @@ public class BlockedHeapFileTableReader implements BlockedTableReader {
     @Override
     public DBPage getPrevDataPage(TableFileInfo tblFileInfo, DBPage dbPage)
         throws IOException {
-
-        // TODO:  Implement.
+        int page = dbPage.getPageNo();
+        if (page > 2) {
+            return storageManager.loadDBPage(tblFileInfo.getDBFile(), 
+                dbPage.getPageNo() - 1);
+        }
         return null;
     }
 
@@ -74,7 +88,13 @@ public class BlockedHeapFileTableReader implements BlockedTableReader {
     // Inherit Javadocs.
     @Override
     public Tuple getFirstTupleInPage(TableFileInfo tblFileInfo, DBPage dbPage) {
-        // TODO:  Implement.
+        int numSlots = DataPage.getNumSlots(dbPage);
+        for (int iSlot = 0; iSlot < numSlots; iSlot++) {
+            int offset = DataPage.getSlotValue(dbPage, iSlot);
+            if (offset == DataPage.EMPTY_SLOT)
+                continue;
+            return new HeapFilePageTuple(tblFileInfo, dbPage, iSlot, offset);
+        }
         return null;
     }
 
@@ -90,7 +110,19 @@ public class BlockedHeapFileTableReader implements BlockedTableReader {
         }
         HeapFilePageTuple ptup = (HeapFilePageTuple) tup;
 
-        // TODO:  Implement.
+        int nextSlot = ptup.getSlot() + 1;
+        int numSlots = DataPage.getNumSlots(dbPage);
+        
+        while (nextSlot < numSlots) {
+            int nextOffset = DataPage.getSlotValue(dbPage, nextSlot);
+            if (nextOffset != DataPage.EMPTY_SLOT) {
+                return new HeapFilePageTuple(tblFileInfo, dbPage, nextSlot, 
+                    nextOffset);
+            }
+            
+            nextSlot++;
+        }
+        
         return null;
     }
 }

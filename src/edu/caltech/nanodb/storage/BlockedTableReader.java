@@ -15,7 +15,7 @@ import java.io.IOException;
 public interface BlockedTableReader {
     /**
      * Returns the first page that would contain data in the table being read.
-     * Note that there is no gurantee that the page does contain table data, for
+     * Note that there is no guarantee that the page does contain table data, for
      * example if all tuples in the page have been deleted, or if no tuples have
      * yet been added to this page.
      *
@@ -32,7 +32,7 @@ public interface BlockedTableReader {
 
     /**
      * Returns the last page that would contain data in the table being read.
-     * Note that there is no gurantee that the page does contain table data, for
+     * Note that there is no guarantee that the page does contain table data, for
      * example if all tuples in the page have been deleted, or if no tuples have
      * yet been added to this page.
      *
@@ -49,8 +49,8 @@ public interface BlockedTableReader {
 
     /**
      * Returns the next data page in the table that would follow the current
-     * data paqe, or <tt>null</tt> if there are no more data pages.  Note that
-     * there is no gurantee that the page does contain table data, for example
+     * data page, or <tt>null</tt> if there are no more data pages.  Note that
+     * there is no guarantee that the page does contain table data, for example
      * if all tuples in the page have been deleted, or if no tuples have yet
      * been added to this page.
      *
@@ -70,7 +70,7 @@ public interface BlockedTableReader {
 
     /**
      * Returns the previous data page in the table that would precede the
-     * current data paqe.  Note that there is no gurantee that the page does
+     * current data page.  Note that there is no guarantee that the page does
      * contain table data, for example if all tuples in the page have been
      * deleted, or if no tuples have yet been added to this page.
      *

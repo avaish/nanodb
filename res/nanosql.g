@@ -210,7 +210,7 @@ column_name returns [ColumnName cn]
  * different {@link edu.caltech.nanodb.commands.Command} instance that contains
  * the SQL command's details.  This rule returns that Command instance, fully
  * configured.
- **/
+ */
 create_stmt returns [Command c] { c = null; } :
   c=create_table | c=create_view | c=create_index ;
 
@@ -278,7 +278,7 @@ table_col_decl[CreateTableCommand cTab] returns [ColumnInfo colInfo]
  * Column type-specifications are parsed by this rule.  Some types are simple
  * keywords.  Others have supporting arguments to parse as well, such as lengths
  * or precisions.  User-defined types are not supported.
- **/
+ */
 column_type returns [ColumnType ct]
   {
     ct = null;
@@ -308,7 +308,7 @@ column_type returns [ColumnType ct]
  * Note that column-constraints and table-constraints can be quite different,
  * even though they are represented with the same Java class in the
  * implementation.
- **/
+ */
 column_constraint returns [ConstraintDecl c]
   {
     c = null;
@@ -331,7 +331,7 @@ column_constraint returns [ConstraintDecl c]
  * Note that column-constraints and table-constraints can be quite different,
  * even though they are represented with the same Java class in the
  * implementation.
- **/
+ */
 table_constraint returns [ConstraintDecl c]
   {
     c = null;
@@ -437,7 +437,7 @@ select_stmt returns [QueryCommand c] { c = null; SelectClause sc = null; } :
  * This rule parses a SELECT clause.  Since SELECT clauses can be nested in
  * other expressions, it's important to have this as a separate sub-rule in the
  * parser.
- **/
+ */
 select_clause returns [SelectClause sc]
   {
     sc = new SelectClause();
@@ -677,7 +677,7 @@ explain_stmt returns [Command c]
  * appropriate structure of the expression, and that is about applying operator
  * precedence and following the form of the expressions.  Semantic analysis
  * catches the nonsensical statements.
- **/
+ */
 expression returns [Expression e] { e = null; } : e=logical_or_expr ;
 
 
@@ -768,7 +768,7 @@ exists_expr returns [Expression e]
  *       includes compare_expr, like_expr, between_expr, in_expr, and is_expr.
  *       BUT:  this introduces nondeterminism into the parser, once you add the
  *       other alternatives.  :(  Work out a solution...
- **/
+ */
 relational_expr returns [Expression e]
   {
     e = null;
@@ -831,7 +831,7 @@ is_expr : additive_expr ( IS ( TRUE | FALSE | UNKNOWN | (NOT)? NULL ) )? ;
 /**
  * A numeric expression is at least one numeric term.  Multiple numeric terms
  * are added or subtracted with each other.
- **/
+ */
 additive_expr returns [Expression e]
   {
     e = null;
@@ -848,7 +848,7 @@ additive_expr returns [Expression e]
 /**
  * A numeric term is at least one numeric factor.  Multiple numeric factors
  * are multiplied or divided with each other.
- **/
+ */
 mult_expr returns [Expression e]
   {
     e = null;
@@ -1020,7 +1020,7 @@ QUOTED_IDENT :
  * <p>
  * Note that these numbers are <i>unsigned</i>.  Signed numbers have to be
  * processed separately.
- **/
+ */
 NUM_LITERAL_OR_SYMBOL :
     ('0'..'9')+ { $setType(INT_LITERAL); }
       ( ('L'! { $setType(LONG_LITERAL); } )

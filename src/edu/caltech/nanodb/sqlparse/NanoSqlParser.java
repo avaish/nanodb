@@ -232,7 +232,7 @@ public NanoSqlParser(ParserSharedInputState state) {
  * different {@link edu.caltech.nanodb.commands.Command} instance that contains
  * the SQL command's details.  This rule returns that Command instance, fully
  * configured.
- **/
+ */
 	public final Command  create_stmt() throws RecognitionException, TokenStreamException {
 		Command c;
 		
@@ -1094,7 +1094,7 @@ public NanoSqlParser(ParserSharedInputState state) {
 /**
  * Table column declarations are similar to view column declarations, but can
  * have additional syntax declaring constraints on values in the table-column.
- **/
+ */
 	public final ColumnInfo  table_col_decl(
 		CreateTableCommand cTab
 	) throws RecognitionException, TokenStreamException {
@@ -1141,7 +1141,7 @@ public NanoSqlParser(ParserSharedInputState state) {
  * Note that column-constraints and table-constraints can be quite different,
  * even though they are represented with the same Java class in the
  * implementation.
- **/
+ */
 	public final ConstraintDecl  table_constraint() throws RecognitionException, TokenStreamException {
 		ConstraintDecl c;
 		
@@ -1315,7 +1315,7 @@ public NanoSqlParser(ParserSharedInputState state) {
  * Column type-specifications are parsed by this rule.  Some types are simple
  * keywords.  Others have supporting arguments to parse as well, such as lengths
  * or precisions.  User-defined types are not supported.
- **/
+ */
 	public final ColumnType  column_type() throws RecognitionException, TokenStreamException {
 		ColumnType ct;
 		
@@ -1467,7 +1467,7 @@ public NanoSqlParser(ParserSharedInputState state) {
  * Note that column-constraints and table-constraints can be quite different,
  * even though they are represented with the same Java class in the
  * implementation.
- **/
+ */
 	public final ConstraintDecl  column_constraint() throws RecognitionException, TokenStreamException {
 		ConstraintDecl c;
 		
@@ -1579,7 +1579,7 @@ public NanoSqlParser(ParserSharedInputState state) {
  * This rule parses a SELECT clause.  Since SELECT clauses can be nested in
  * other expressions, it's important to have this as a separate sub-rule in the
  * parser.
- **/
+ */
 	public final SelectClause  select_clause() throws RecognitionException, TokenStreamException {
 		SelectClause sc;
 		
@@ -2030,7 +2030,7 @@ public NanoSqlParser(ParserSharedInputState state) {
  * appropriate structure of the expression, and that is about applying operator
  * precedence and following the form of the expressions.  Semantic analysis
  * catches the nonsensical statements.
- **/
+ */
 	public final Expression  expression() throws RecognitionException, TokenStreamException {
 		Expression e;
 		
@@ -2709,7 +2709,7 @@ public NanoSqlParser(ParserSharedInputState state) {
  *       includes compare_expr, like_expr, between_expr, in_expr, and is_expr.
  *       BUT:  this introduces nondeterminism into the parser, once you add the
  *       other alternatives.  :(  Work out a solution...
- **/
+ */
 	public final Expression  relational_expr() throws RecognitionException, TokenStreamException {
 		Expression e;
 		
@@ -2962,7 +2962,7 @@ public NanoSqlParser(ParserSharedInputState state) {
 /**
  * A numeric expression is at least one numeric term.  Multiple numeric terms
  * are added or subtracted with each other.
- **/
+ */
 	public final Expression  additive_expr() throws RecognitionException, TokenStreamException {
 		Expression e;
 		
@@ -3018,7 +3018,7 @@ public NanoSqlParser(ParserSharedInputState state) {
 /**
  * A numeric term is at least one numeric factor.  Multiple numeric factors
  * are multiplied or divided with each other.
- **/
+ */
 	public final Expression  mult_expr() throws RecognitionException, TokenStreamException {
 		Expression e;
 		

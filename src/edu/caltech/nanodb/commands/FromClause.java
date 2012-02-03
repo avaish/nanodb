@@ -4,10 +4,11 @@ package edu.caltech.nanodb.commands;
 import java.io.IOException;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import edu.caltech.nanodb.expressions.FunctionCall;
 import org.apache.log4j.Logger;
 
 import edu.caltech.nanodb.expressions.BooleanOperator;
@@ -191,13 +192,37 @@ public class FromClause {
 
 
     /**
-     * When preparing SQL commands for execution, this value is filled in with
-     * the schema of the data that this <tt>FROM</tt> clause produces.
+     * This value is filled in with the schema of the data that this
+     * <tt>FROM</tt> clause produces, when the {@link #prepare} method is
+     * called.  This is done when a SQL statement is being prepared for
+     * execution, and is typically kicked off by the
+     * {@link SelectClause#computeSchema} method, which in turn prepares the
+     * from-clause objects.
      */
     private Schema preparedSchema = null;
 
 
+    /**
+     * For <tt>FROM</tt> clauses that either directly or indirectly specify a
+     * join condition, this value is filled in with the join condition to apply,
+     * when the {@link #prepare} method is called.  This is done when a SQL
+     * statement is being prepared for execution, and is typically kicked off by
+     * the {@link SelectClause#computeSchema} method, which in turn prepares the
+     * from-clause objects.
+     */
     private Expression preparedJoinExpr = null;
+
+
+    /**
+     * In cases of <tt>NATURAL</tt> joins or joins with a <tt>USING</tt> clause,
+     * this value is filled in with {@link SelectValue} objects that can be used
+     * to perform a suitable project to eliminate duplicate columns.  If no
+     * duplicate columns are to be eliminated, this value will be <tt>null</tt>.
+     * This value is populated when the {@link #prepare} method is called, and
+     * is typically kicked off by the {@link SelectClause#computeSchema} method,
+     * which in turn prepares the from-clause objects.
+     */
+    private ArrayList<SelectValue> preparedSelectValues = null;
 
 
     /**
@@ -292,8 +317,8 @@ public class FromClause {
 
 
     /**
-     * Returns true if this from clause specifies a base table as opposed
-     * to a derived table.
+     * Returns true if this from clause specifies a base table, as opposed
+     * to a derived table or a join expression.
      *
      * @return <tt>true</tt> if this clause specifies a base table.
      */
@@ -303,14 +328,25 @@ public class FromClause {
 
 
     /**
-     * Returns true if this from clause specifies a derived table as
-     * opposed to a base table.
+     * Returns true if this from clause specifies a derived table, as
+     * opposed to a base table or a join expression.
      *
      * @return <tt>true</tt> if this clause is a derived table specified as a
      *         <tt>SELECT</tt> statement.
      */
     public boolean isDerivedTable() {
         return (clauseType == ClauseType.SELECT_SUBQUERY);
+    }
+
+
+    /**
+     * Returns true if this from clause specifies a join expression, as opposed
+     * to a base table or a join expression.
+     *
+     * @return <tt>true</tt> if this clause is a join expression.
+     */
+    public boolean isJoinExpr() {
+        return (clauseType == ClauseType.JOIN_EXPR);
     }
 
 
@@ -446,6 +482,49 @@ public class FromClause {
 
 
     /**
+     * Returns true if this join clause is an outer join, false otherwise.
+     *
+     * @return true if this join clause is an outer join, false otherwise.
+     *
+     * @throws IllegalStateException if the clause-type is not a join clause.
+     *         Only join clauses have a join type.
+     */
+    public boolean isOuterJoin() {
+        if (clauseType != ClauseType.JOIN_EXPR) {
+            throw new IllegalStateException(
+                "This from-clause is not a join expression.");
+        }
+
+        return (joinType == JoinType.LEFT_OUTER ||
+                joinType == JoinType.RIGHT_OUTER ||
+                joinType == JoinType.FULL_OUTER);
+    }
+
+
+    public boolean hasOuterJoinOnLeft() {
+        if (clauseType != ClauseType.JOIN_EXPR) {
+            throw new IllegalStateException(
+                "This from-clause is not a join expression.");
+        }
+
+        return joinType == JoinType.LEFT_OUTER ||
+               joinType == JoinType.FULL_OUTER;
+    }
+
+
+    public boolean hasOuterJoinOnRight() {
+        if (clauseType != ClauseType.JOIN_EXPR) {
+            throw new IllegalStateException(
+                "This from-clause is not a join expression.");
+        }
+
+        return joinType == JoinType.RIGHT_OUTER ||
+               joinType == JoinType.FULL_OUTER;
+    }
+
+
+
+    /**
      * Returns the join condition type.  This value will be null if there is
      * only 1 table in the outer array of from clauses.
      *
@@ -565,6 +644,32 @@ public class FromClause {
     }
 
 
+    /**
+     * This function prepares the from-clause for use by the planner to generate
+     * an actual execution plan from the clause.  This includes several
+     * important tasks:
+     * <ul>
+     *   <li>The schema of the from-clause's output is determined.</li>
+     *   <li>If the from-clause is a join, and the join specifies
+     *       <tt>NATURAL</tt>, <tt>USING (col, ...)</tt>, or an <tt>ON</tt>
+     *       clause, the join condition is determined</li>
+     * </ul>
+     * <p>
+     * Since a from-clause can be a SQL subquery or a join expression, it
+     * should be evident that the method will recursively prepare its children
+     * as well.
+     * </p>
+     * <p>
+     * <b>This method really shouldn't be called directly.</b>  Instead, the
+     * enclosing {@link SelectClause} will calls this method when the clause's
+     * {@link SelectClause#computeSchema} method is invoked.
+     * </p>
+     *
+     * @return the schema of the from-clause's output
+     *
+     * @throws IOException if a table's schema cannot be loaded, or some other
+     *         IO issue occurs.
+     */
     public Schema prepare() throws IOException {
 
         Schema result = null;
@@ -607,25 +712,28 @@ public class FromClause {
             Schema leftSchema = leftChild.prepare();
             Schema rightSchema = rightChild.prepare();
 
-            // Make sure there are no duplicate tables in the input schemas.
-
-            Set<String> commonTables =
-                leftSchema.getCommonTableNames(rightSchema);
-
-            if (!commonTables.isEmpty()) {
-                StringBuilder buf = new StringBuilder();
-                for (String name : commonTables)
-                    buf.append(' ').append(name);
-
-                throw new SchemaNameException(
-                    "Join on relations with duplicate table names: " + buf);
-            }
-
             // Depending on the join type, we might eliminate duplicate column
             // names.
             if (condType == JoinConditionType.NATURAL_JOIN) {
+                // Make sure that each side of the join doesn't have any
+                // duplicate column names.  (A schema can have columns with the
+                // same name, but from different table names.  This is not
+                // allowed for natural joins.)
+                if (leftSchema.hasMultipleColumnsWithSameName()) {
+                    throw new SchemaNameException("Natural join error:  " +
+                        "left child table has multiple columns with same " +
+                        "column name");
+                }
+                if (rightSchema.hasMultipleColumnsWithSameName()) {
+                    throw new SchemaNameException("Natural join error:  " +
+                        "right child table has multiple columns with same " +
+                        "column name");
+                }
+
                 Set<String> commonCols = leftSchema.getCommonColumnNames(rightSchema);
                 if (commonCols.isEmpty()) {
+                    // TODO:  According to the SQL99 standard, this shouldn't
+                    //        generate an error.
                     throw new SchemaNameException("Natural join error:  " +
                         "child tables share no common column names!");
                 }
@@ -634,7 +742,7 @@ public class FromClause {
                     commonCols, result);
             }
             else if (condType == JoinConditionType.JOIN_USING) {
-                Set<String> commonCols = new HashSet<String>();
+                LinkedHashSet<String> commonCols = new LinkedHashSet<String>();
                 for (String name : joinUsingNames) {
                     if (!commonCols.add(name)) {
                         throw new SchemaNameException("Column name " + name +
@@ -663,44 +771,126 @@ public class FromClause {
     }
 
 
+    /**
+     * <p>
+     * This helper function handles a <tt>NATURAL</tt> join or a join with a
+     * <tt>USING</tt> clause, determining what columns to use in the join,
+     * computing the join predicate to use, and computing the schema of the
+     * join result.
+     * </p>
+     * <p>
+     * The schema of the result follows the SQL standard:
+     * </p>
+     * <ul>
+     *     <li>Common columns first, in the order specified, if any.</li>
+     *     <li>Columns that appear only in the left table, if any.</li>
+     *     <li>Columns that appear only in the right table, if any.</li>
+     * </ul>
+     * <p>
+     * Of course, any of these sets of columns could be empty.
+     * </p>
+     *
+     * @param context a string used in logging messages and exceptions to
+     *        indicate the context in which this method was called.
+     *
+     * @param leftSchema the schema of the table on the left side of the join
+     *
+     * @param rightSchema the schema of the table on the right side of the join
+     *
+     * @param commonCols the set of common columns to use
+     * @param result this output-parameter is updated to hold the schema of the
+     *        result, as produced by the join operation.
+     */
     private void buildJoinSchema(String context, Schema leftSchema,
         Schema rightSchema, Set<String> commonCols, Schema result) {
 
-        BooleanOperator andOp = new BooleanOperator(BooleanOperator.Type.AND_EXPR);
+        preparedJoinExpr = null;
+        preparedSelectValues = null;
+        if (!commonCols.isEmpty()) {
+            preparedSelectValues = new ArrayList<SelectValue>();
 
-        // Handle the shared columns.  We need to check that the
-        // names aren't ambiguous on one or the other side.
-        for (String name: commonCols) {
-            checkJoinColumn(context, "left", leftSchema, name);
-            checkJoinColumn(context, "right", leftSchema, name);
+            // We will need to generate a join expression using the common
+            // columns.  We will also need a project-spec that will project down
+            // to only one copy of the common columns.
+            
+            BooleanOperator andOp = new BooleanOperator(BooleanOperator.Type.AND_EXPR);
 
-            // Seems OK, so add it to the result.
-            ColumnInfo lhsColInfo = leftSchema.getColumnInfo(name);
-            ColumnInfo rhsColInfo = rightSchema.getColumnInfo(name);
+            // Handle the shared columns.  We need to check that the
+            // names aren't ambiguous on one or the other side.
+            for (String name: commonCols) {
+                checkJoinColumn(context, "left", leftSchema, name);
+                checkJoinColumn(context, "right", leftSchema, name);
 
-            result.addColumnInfo(
-                new ColumnInfo(lhsColInfo.getName(), lhsColInfo.getType()));
+                // Seems OK, so add it to the result.
+                ColumnInfo lhsColInfo = leftSchema.getColumnInfo(name);
+                ColumnInfo rhsColInfo = rightSchema.getColumnInfo(name);
 
-            // Add an equality test between the common columns to the join
-            // condition.
-            CompareOperator eq = new CompareOperator(CompareOperator.Type.EQUALS,
-                new ColumnValue(lhsColInfo.getColumnName()),
-                new ColumnValue(rhsColInfo.getColumnName()));
+                result.addColumnInfo(
+                    new ColumnInfo(lhsColInfo.getName(), lhsColInfo.getType()));
 
-            andOp.addTerm(eq);
+                // Add an equality test between the common columns to the join
+                // condition.
+                CompareOperator eq = new CompareOperator(CompareOperator.Type.EQUALS,
+                    new ColumnValue(lhsColInfo.getColumnName()),
+                    new ColumnValue(rhsColInfo.getColumnName()));
+
+                andOp.addTerm(eq);
+
+                // Add a select-value that projects the appropriate source
+                // column down to the common column.
+                SelectValue selVal;
+                switch (joinType) {
+                case INNER:
+                case LEFT_OUTER:
+                    // We can use the left column in the result, as it will
+                    // always be non-NULL.
+                    selVal = new SelectValue(
+                        new ColumnValue(lhsColInfo.getColumnName()), name);
+                    preparedSelectValues.add(selVal);
+                    break;
+
+                case RIGHT_OUTER:
+                    // We can use the right column in the result, as it will
+                    // always be non-NULL.
+                    selVal = new SelectValue(
+                        new ColumnValue(rhsColInfo.getColumnName()), name);
+                    preparedSelectValues.add(selVal);
+                    break;
+                
+                case FULL_OUTER:
+                    // In this case, the LHS column-value could be null, or the
+                    // RHS column-value could be null.  Thus, we need to produce
+                    // a result of COALESCE(lhs.col, rhs.col) AS col.
+                    Expression coalesce = new FunctionCall("COALESCE",
+                        new ColumnValue(lhsColInfo.getColumnName()),
+                        new ColumnValue(rhsColInfo.getColumnName()));
+                    selVal = new SelectValue(coalesce, name);
+                    preparedSelectValues.add(selVal);
+                }
+            }
+
+            preparedJoinExpr = andOp;
         }
 
         // Handle the non-shared columns
         for (ColumnInfo colInfo : leftSchema) {
-            if (!commonCols.contains(colInfo.getName()))
+            if (!commonCols.contains(colInfo.getName())) {
                 result.addColumnInfo(colInfo);
+            
+                SelectValue selVal = new SelectValue(
+                    new ColumnValue(colInfo.getColumnName()), null);
+                preparedSelectValues.add(selVal);
+            }
         }
         for (ColumnInfo colInfo : rightSchema) {
-            if (!commonCols.contains(colInfo.getName()))
+            if (!commonCols.contains(colInfo.getName())) {
                 result.addColumnInfo(colInfo);
-        }
 
-        preparedJoinExpr = andOp;
+                SelectValue selVal = new SelectValue(
+                    new ColumnValue(colInfo.getColumnName()), null);
+                preparedSelectValues.add(selVal);
+            }
+        }
     }
 
 
@@ -725,6 +915,11 @@ public class FromClause {
 
     public Expression getPreparedJoinExpr() {
         return preparedJoinExpr;
+    }
+
+
+    public ArrayList<SelectValue> getPreparedSelectValues() {
+        return preparedSelectValues;
     }
 
 

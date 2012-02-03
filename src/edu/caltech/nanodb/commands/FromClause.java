@@ -482,6 +482,49 @@ public class FromClause {
 
 
     /**
+     * Returns true if this join clause is an outer join, false otherwise.
+     *
+     * @return true if this join clause is an outer join, false otherwise.
+     *
+     * @throws IllegalStateException if the clause-type is not a join clause.
+     *         Only join clauses have a join type.
+     */
+    public boolean isOuterJoin() {
+        if (clauseType != ClauseType.JOIN_EXPR) {
+            throw new IllegalStateException(
+                "This from-clause is not a join expression.");
+        }
+
+        return (joinType == JoinType.LEFT_OUTER ||
+                joinType == JoinType.RIGHT_OUTER ||
+                joinType == JoinType.FULL_OUTER);
+    }
+
+
+    public boolean hasOuterJoinOnLeft() {
+        if (clauseType != ClauseType.JOIN_EXPR) {
+            throw new IllegalStateException(
+                "This from-clause is not a join expression.");
+        }
+
+        return joinType == JoinType.LEFT_OUTER ||
+               joinType == JoinType.FULL_OUTER;
+    }
+
+
+    public boolean hasOuterJoinOnRight() {
+        if (clauseType != ClauseType.JOIN_EXPR) {
+            throw new IllegalStateException(
+                "This from-clause is not a join expression.");
+        }
+
+        return joinType == JoinType.RIGHT_OUTER ||
+               joinType == JoinType.FULL_OUTER;
+    }
+
+
+
+    /**
      * Returns the join condition type.  This value will be null if there is
      * only 1 table in the outer array of from clauses.
      *
@@ -601,6 +644,32 @@ public class FromClause {
     }
 
 
+    /**
+     * This function prepares the from-clause for use by the planner to generate
+     * an actual execution plan from the clause.  This includes several
+     * important tasks:
+     * <ul>
+     *   <li>The schema of the from-clause's output is determined.</li>
+     *   <li>If the from-clause is a join, and the join specifies
+     *       <tt>NATURAL</tt>, <tt>USING (col, ...)</tt>, or an <tt>ON</tt>
+     *       clause, the join condition is determined</li>
+     * </ul>
+     * <p>
+     * Since a from-clause can be a SQL subquery or a join expression, it
+     * should be evident that the method will recursively prepare its children
+     * as well.
+     * </p>
+     * <p>
+     * <b>This method really shouldn't be called directly.</b>  Instead, the
+     * enclosing {@link SelectClause} will calls this method when the clause's
+     * {@link SelectClause#computeSchema} method is invoked.
+     * </p>
+     *
+     * @return the schema of the from-clause's output
+     *
+     * @throws IOException if a table's schema cannot be loaded, or some other
+     *         IO issue occurs.
+     */
     public Schema prepare() throws IOException {
 
         Schema result = null;

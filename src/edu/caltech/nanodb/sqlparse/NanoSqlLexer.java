@@ -836,7 +836,7 @@ tryAgain:
  * <p>
  * Note that these numbers are <i>unsigned</i>.  Signed numbers have to be
  * processed separately.
- **/
+ */
 	public final void mNUM_LITERAL_OR_SYMBOL(boolean _createToken) throws RecognitionException, CharStreamException, TokenStreamException {
 		int _ttype; Token _token=null; int _begin=text.length();
 		_ttype = NUM_LITERAL_OR_SYMBOL;

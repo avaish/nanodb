@@ -245,12 +245,22 @@ public class Schema implements Serializable, Iterable<ColumnInfo> {
      * Returns a set containing all column names that appear in this schema.
      * Note that a column-name may be used by multiple columns, if it is
      * associated with multiple table names in this schema.
+     *
+     * @return a set containing all column names that appear in this schema.
      */
     public Set<String> getColumnNames() {
         return Collections.unmodifiableSet(colsHashedByColumn.keySet());
     }
 
 
+    /**
+     * Returns the names of columns that are common between this schema and the
+     * specified schema.  This kind of operation is mainly used for resolving
+     * <tt>NATURAL</tt> joins.
+     *
+     * @param s the schema to compare to this schema
+     * @return a set of the common column names
+     */
     public Set<String> getCommonColumnNames(Schema s) {
         HashSet<String> shared = new HashSet<String>(colsHashedByColumn.keySet());
         shared.retainAll(s.getColumnNames());
@@ -272,6 +282,23 @@ public class Schema implements Serializable, Iterable<ColumnInfo> {
             return list.size();
 
         return 0;
+    }
+
+
+    /**
+     * This helper method returns true if this schema contains any columns with
+     * the same column name but different table names.  If so, the schema is not
+     * valid for use on one side of a <tt>NATURAL</tt> join.
+     *
+     * @return true if the schema has multiple columns with the same column name
+     *         but different table names, or false otherwise.
+     */
+    public boolean hasMultipleColumnsWithSameName() {
+        for (String cName : colsHashedByColumn.keySet()) {
+            if (colsHashedByColumn.get(cName).size() > 1)
+                return true;
+        }
+        return false;
     }
 
 

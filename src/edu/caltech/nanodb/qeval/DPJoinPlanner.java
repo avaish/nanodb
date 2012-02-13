@@ -256,8 +256,29 @@ public class DPJoinPlanner implements Planner {
      */
     private void collectDetails(FromClause fromClause,
         HashSet<Expression> conjuncts, ArrayList<FromClause> leafFromClauses) {
-
-        // TODO:  IMPLEMENT
+    	if (fromClause.isJoinExpr()) {
+    		addConjuncts(conjuncts, fromClause.getPreparedJoinExpr());
+    		if (fromClause.getLeftChild().isBaseTable() || 
+    			fromClause.getLeftChild().isDerivedTable() || 
+    			fromClause.getLeftChild().isOuterJoin())
+    		{
+    			leafFromClauses.add(fromClause.getLeftChild());
+    		}
+    		else
+    		{
+    			collectDetails(fromClause.getLeftChild(), conjuncts, leafFromClauses);
+    		}
+    		if (fromClause.getRightChild().isBaseTable() || 
+        		fromClause.getRightChild().isDerivedTable() || 
+        		fromClause.getRightChild().isOuterJoin())
+        	{
+        		leafFromClauses.add(fromClause.getRightChild());
+        	}
+        	else
+        	{
+        		collectDetails(fromClause.getRightChild(), conjuncts, leafFromClauses);
+        	}
+    	}
     }
 
 

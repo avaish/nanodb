@@ -243,7 +243,10 @@ public class DPJoinPlanner implements Planner {
      * This helper method pulls the essential details for join optimization out
      * of a <tt>FROM</tt> clause.
      * <p>
-     * <b>TODO:  FILL IN DETAILS.</b>
+     * We accumulate conjucts and leaves from a from clause (and children from
+     * clauses that are not leaves). A leaf is defined to be a from clause
+     * representing a base table, a subquery, or an outer join. Conjucts are
+     * collected from from clause predicates of non leaf from clauses.
      *
      * @param fromClause the from-clause to collect details from
      *

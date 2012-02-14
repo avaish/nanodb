@@ -256,20 +256,22 @@ public class DPJoinPlanner implements Planner {
      */
     private void collectDetails(FromClause fromClause,
         HashSet<Expression> conjuncts, ArrayList<FromClause> leafFromClauses) {
-    	if (fromClause.isJoinExpr() && !fromClause.isOuterJoin()) {
-    		addConjuncts(conjuncts, fromClause.getPreparedJoinExpr());
-    		if (fromClause.isJoinExpr() && !fromClause.isOuterJoin())
-    			collectDetails(fromClause.getLeftChild(), conjuncts, leafFromClauses);
-    		else
-    			leafFromClauses.add(fromClause.getLeftChild());
-    		if (fromClause.isJoinExpr() && !fromClause.isOuterJoin())
-    			collectDetails(fromClause.getRightChild(), conjuncts, leafFromClauses);
-        	else
-        		leafFromClauses.add(fromClause.getRightChild());
-    	}
-    	else {
-    		leafFromClauses.add(fromClause);
-    	}
+        if (fromClause.isJoinExpr() && !fromClause.isOuterJoin()) {
+            addConjuncts(conjuncts, fromClause.getPreparedJoinExpr());
+            if (fromClause.isJoinExpr() && !fromClause.isOuterJoin())
+                collectDetails(fromClause.getLeftChild(), conjuncts, 
+                    leafFromClauses);
+            else
+                leafFromClauses.add(fromClause.getLeftChild());
+            if (fromClause.isJoinExpr() && !fromClause.isOuterJoin())
+                collectDetails(fromClause.getRightChild(), conjuncts, 
+                    leafFromClauses);
+            else
+                leafFromClauses.add(fromClause.getRightChild());
+        }
+        else {
+            leafFromClauses.add(fromClause);
+        }
     }
 
 
@@ -384,70 +386,79 @@ public class DPJoinPlanner implements Planner {
     private PlanNode makeLeafPlan(FromClause fromClause,
         Collection<Expression> conjuncts, HashSet<Expression> leafConjuncts)
         throws IOException {
-    	
-    	PlanNode top = null;
-    	
-    	if (fromClause.isBaseTable()) {
-    		top = makeSimpleSelect(fromClause.getTableName(), null);
-    		if (fromClause.isRenamed())
+        
+        PlanNode top = null;
+        
+        if (fromClause.isBaseTable()) {
+            top = makeSimpleSelect(fromClause.getTableName(), null);
+            if (fromClause.isRenamed())
                 top = new RenameNode(top, fromClause.getResultName());
-    		
-    		top.prepare();
-    		
-    		findExprsUsingSchemas(conjuncts, false, leafConjuncts, 
-    			top.getSchema());
-    		
-    		if (!leafConjuncts.isEmpty()) {
-    			addPredicateToPlan(top, makePredicate(leafConjuncts));
-	    		top.prepare();
-    		}
-    	}
-    	else if (fromClause.isDerivedTable()) {
-    		top = new RenameNode((makePlan(fromClause.getSelectClause())), 
-    			fromClause.getResultName());
-    		
-    		top.prepare();
-    		
-    		findExprsUsingSchemas(conjuncts, false, leafConjuncts, 
-    			top.getSchema());
-    		
-    		if (!leafConjuncts.isEmpty()) {
-    			addPredicateToPlan(top, makePredicate(leafConjuncts));
-	    		top.prepare();
-    		}
-    	}
-    	else if (fromClause.isOuterJoin()) {
-    		JoinComponent left_plan;
-    	    JoinComponent right_plan;
-    		
-    		if (!fromClause.hasOuterJoinOnRight()) {
-    			left_plan = makeJoinPlan(fromClause.getLeftChild(), conjuncts);
-    			leafConjuncts = left_plan.conjunctsUsed;
-    		}
-    		else {
-    			left_plan = makeJoinPlan(fromClause.getLeftChild(), null);
-    		}
-    		if (!fromClause.hasOuterJoinOnLeft()) {
-    			right_plan = makeJoinPlan(fromClause.getRightChild(), conjuncts);
-    			leafConjuncts = right_plan.conjunctsUsed;
-    		}
-    		else {
-    			right_plan = makeJoinPlan(fromClause.getLeftChild(), null);
-    		}
-    		
-    		PlanNode left = left_plan.joinPlan;
-    		PlanNode right = right_plan.joinPlan;
-    		
-    		top = new NestedLoopsJoinNode(left, right, fromClause.getJoinType(), 
-    			fromClause.getPreparedJoinExpr());
-    		
-    		top.prepare();
-    	}
-    	else {
-    		throw new IllegalArgumentException("Invalid from clause.");
-    	}
-    	
-    	return top;
+            
+            top.prepare();
+            
+            // Find conjuncts that might apply to this leaf.
+            findExprsUsingSchemas(conjuncts, false, leafConjuncts, 
+                top.getSchema());
+            
+            // If we have conjuncts to pass down, do so.
+            if (!leafConjuncts.isEmpty()) {
+                addPredicateToPlan(top, makePredicate(leafConjuncts));
+                top.prepare();
+            }
+        }
+        else if (fromClause.isDerivedTable()) {
+            top = new RenameNode((makePlan(fromClause.getSelectClause())), 
+                fromClause.getResultName());
+            
+            top.prepare();
+            
+            // Find conjuncts that might apply to this leaf.
+            findExprsUsingSchemas(conjuncts, false, leafConjuncts, 
+                top.getSchema());
+            
+            // If we have conjuncts to pass down, do so.
+            if (!leafConjuncts.isEmpty()) {
+                addPredicateToPlan(top, makePredicate(leafConjuncts));
+                top.prepare();
+            }
+        }
+        else if (fromClause.isOuterJoin()) {
+            JoinComponent left_plan;
+            JoinComponent right_plan;
+            
+            // If we have no outer join on right, the left child can take in
+            // conjuncts without a change in overall results.
+            if (!fromClause.hasOuterJoinOnRight()) {
+                left_plan = makeJoinPlan(fromClause.getLeftChild(), conjuncts);
+                leafConjuncts = left_plan.conjunctsUsed;
+            }
+            else {
+                left_plan = makeJoinPlan(fromClause.getLeftChild(), null);
+            }
+            
+            // If we have no outer join on left, the right child can take in
+            // conjuncts without a change in overall results.
+            if (!fromClause.hasOuterJoinOnLeft()) {
+                right_plan = makeJoinPlan(fromClause.getRightChild(), conjuncts);
+                leafConjuncts = right_plan.conjunctsUsed;
+            }
+            else {
+                right_plan = makeJoinPlan(fromClause.getLeftChild(), null);
+            }
+            
+            PlanNode left = left_plan.joinPlan;
+            PlanNode right = right_plan.joinPlan;
+            
+            top = new NestedLoopsJoinNode(left, right, fromClause.getJoinType(), 
+                fromClause.getPreparedJoinExpr());
+            
+            top.prepare();
+        }
+        else {
+            throw new IllegalArgumentException("Invalid from clause.");
+        }
+        
+        return top;
     }
 
 
@@ -501,50 +512,60 @@ public class DPJoinPlanner implements Planner {
                 new HashMap<HashSet<PlanNode>, JoinComponent>();
 
             for (HashSet<PlanNode> nodes : joinPlans.keySet()) {
-            	JoinComponent plan_n = joinPlans.get(nodes);
-            	
-            	for (JoinComponent leaf : leafComponents) {
-            		if (nodes.containsAll(leaf.leavesUsed)) continue;
-            		
-            		HashSet<Expression> conjunctsUsed = new HashSet<Expression>();
-            		conjunctsUsed.addAll(leaf.conjunctsUsed);
-            		conjunctsUsed.addAll(plan_n.conjunctsUsed);
-            		
-            		HashSet<Expression> unusedConjuncts = 
-            			new HashSet<Expression>(conjuncts);
-            		
-            		unusedConjuncts.removeAll(conjunctsUsed);
-            		HashSet<Expression> appliedConjuncts = 
-            			new HashSet<Expression>();
-            		
-            		findExprsUsingSchemas(unusedConjuncts, false, appliedConjuncts,
-            			plan_n.joinPlan.getSchema(), leaf.joinPlan.getSchema());
-            		
-            		conjunctsUsed.addAll(appliedConjuncts);
-            		
-            		PlanNode new_node = new NestedLoopsJoinNode(plan_n.joinPlan, 
-            			leaf.joinPlan, JoinType.INNER, 
-            			makePredicate(appliedConjuncts));
-            		
-            		new_node.prepare();
-            		float cost = new_node.getCost().cpuCost;
-            		
-            		HashSet<PlanNode> new_leaves = new HashSet<PlanNode>(nodes);
-            		new_leaves.addAll(leaf.leavesUsed);
-            		
-            		JoinComponent new_plan = new JoinComponent(new_node, 
-            			new_leaves, conjunctsUsed);
-            		
-            		if (nextJoinPlans.containsKey(new_leaves)) {
-            			if (cost < nextJoinPlans.get(new_leaves).joinPlan.
-            				getCost().cpuCost) {
-            				nextJoinPlans.put(new_leaves, new_plan);
-            			}
-            		}
-            		else {
-            			nextJoinPlans.put(new_leaves, new_plan);
-            		}
-            	}
+                JoinComponent plan_n = joinPlans.get(nodes);
+                
+                for (JoinComponent leaf : leafComponents) {
+                    // If the plan already contains this leaf, continue.
+                    if (nodes.containsAll(leaf.leavesUsed)) continue;
+                    
+                    // Get a set of conjuncts used in the leaf and the current
+                    // plan, to determine unused conjuncts.
+                    HashSet<Expression> conjunctsUsed = new HashSet<Expression>();
+                    conjunctsUsed.addAll(leaf.conjunctsUsed);
+                    conjunctsUsed.addAll(plan_n.conjunctsUsed);
+                    
+                    HashSet<Expression> unusedConjuncts = 
+                        new HashSet<Expression>(conjuncts);
+                    
+                    unusedConjuncts.removeAll(conjunctsUsed);
+                    HashSet<Expression> appliedConjuncts = 
+                        new HashSet<Expression>();
+                    
+                    // Find all the conjuncts that are unused and can be applied
+                    // to the joined schema of both the current plan and the leaf.
+                    findExprsUsingSchemas(unusedConjuncts, false, appliedConjuncts,
+                        plan_n.joinPlan.getSchema(), leaf.joinPlan.getSchema());
+                    
+                    conjunctsUsed.addAll(appliedConjuncts);
+                    
+                    // Create the new Plan Node.
+                    PlanNode new_node = new NestedLoopsJoinNode(plan_n.joinPlan, 
+                        leaf.joinPlan, JoinType.INNER, 
+                        makePredicate(appliedConjuncts));
+                    
+                    // Prepare and cost the new node. This ensures we don't have
+                    // to prepare above.
+                    new_node.prepare();
+                    float cost = new_node.getCost().cpuCost;
+                    
+                    HashSet<PlanNode> new_leaves = new HashSet<PlanNode>(nodes);
+                    new_leaves.addAll(leaf.leavesUsed);
+                    
+                    JoinComponent new_plan = new JoinComponent(new_node, 
+                        new_leaves, conjunctsUsed);
+                    
+                    // We want to make sure only the lowest cost plan is stored
+                    // for any collection of leaves.
+                    if (nextJoinPlans.containsKey(new_leaves)) {
+                        if (cost < nextJoinPlans.get(new_leaves).joinPlan.
+                            getCost().cpuCost) {
+                            nextJoinPlans.put(new_leaves, new_plan);
+                        }
+                    }
+                    else {
+                        nextJoinPlans.put(new_leaves, new_plan);
+                    }
+                }
             }
 
             // Now that we have generated all plans joining n leaves, time to

@@ -257,12 +257,15 @@ public class DPJoinPlanner implements Planner {
     private void collectDetails(FromClause fromClause,
         HashSet<Expression> conjuncts, ArrayList<FromClause> leafFromClauses) {
         if (fromClause.isJoinExpr() && !fromClause.isOuterJoin()) {
+        	
             addConjuncts(conjuncts, fromClause.getPreparedJoinExpr());
+            
             if (fromClause.isJoinExpr() && !fromClause.isOuterJoin())
                 collectDetails(fromClause.getLeftChild(), conjuncts, 
                     leafFromClauses);
             else
                 leafFromClauses.add(fromClause.getLeftChild());
+            
             if (fromClause.isJoinExpr() && !fromClause.isOuterJoin())
                 collectDetails(fromClause.getRightChild(), conjuncts, 
                     leafFromClauses);
@@ -433,7 +436,8 @@ public class DPJoinPlanner implements Planner {
                 leafConjuncts = left_plan.conjunctsUsed;
             }
             else {
-                left_plan = makeJoinPlan(fromClause.getLeftChild(), null);
+                left_plan = makeJoinPlan(fromClause.getLeftChild(), 
+                	new HashSet<Expression>());
             }
             
             // If we have no outer join on left, the right child can take in
@@ -443,7 +447,8 @@ public class DPJoinPlanner implements Planner {
                 leafConjuncts = right_plan.conjunctsUsed;
             }
             else {
-                right_plan = makeJoinPlan(fromClause.getLeftChild(), null);
+                right_plan = makeJoinPlan(fromClause.getLeftChild(), 
+                	new HashSet<Expression>());
             }
             
             PlanNode left = left_plan.joinPlan;

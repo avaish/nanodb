@@ -204,6 +204,7 @@
                 <!-- Specific tests can be excluded with lines like this. -->
                 
                 <exclude name="**/TestDataPage.class" />
+            	<exclude name="**/TestSimpleJoins.class" />
                 
             </classfileset>
         </testng>

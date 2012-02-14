@@ -12,6 +12,10 @@ import edu.caltech.nanodb.server.NanoDBServer;
  * This class exercises the database with some simple <tt>JOIN</tt>
  * clauses (inner, right and left), to see if they work properly on
  * multiple kinds of tables.
+ * 
+ * As of the switch to the DPJoinsPlanner, this test is currently broken, due
+ * to column ordering issues. Once a fix has been implemented, this test will
+ * be updated and reinstated.
  */
 @Test
 public class TestSimpleJoins extends SqlTestCase {

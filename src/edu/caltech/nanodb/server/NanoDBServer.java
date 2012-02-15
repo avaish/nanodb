@@ -42,10 +42,19 @@ public class NanoDBServer {
     }
 
     
-    public static List<CommandResult> doCommands(String commands,
-        boolean includeTuples) throws RecognitionException, TokenStreamException {
+    public static Command parseCommand(String command)
+        throws RecognitionException, TokenStreamException {
 
-        ArrayList<CommandResult> results = new ArrayList<CommandResult>();
+        StringReader strReader = new StringReader(command);
+        NanoSqlLexer lexer = new NanoSqlLexer(strReader);
+        NanoSqlParser parser = new NanoSqlParser(lexer);
+
+        return parser.command();
+    }
+    
+    
+    public static List<Command> parseCommands(String commands)
+        throws RecognitionException, TokenStreamException {
 
         StringReader strReader = new StringReader(commands);
         NanoSqlLexer lexer = new NanoSqlLexer(strReader);
@@ -53,7 +62,26 @@ public class NanoDBServer {
 
         // Parse the string into however many commands there are.  If there is
         // a parsing error, no commands will run.
-        List<Command> parsedCommands = parser.commands();
+        return parser.commands();
+    }
+
+
+    public static CommandResult doCommand(String command, boolean includeTuples)
+        throws RecognitionException, TokenStreamException {
+
+        Command parsedCommand = parseCommand(command);
+        return doCommand(parsedCommand, includeTuples);
+    }
+
+    
+    public static List<CommandResult> doCommands(String commands,
+        boolean includeTuples) throws RecognitionException, TokenStreamException {
+
+        ArrayList<CommandResult> results = new ArrayList<CommandResult>();
+
+        // Parse the string into however many commands there are.  If there is
+        // a parsing error, no commands will run.
+        List<Command> parsedCommands = parseCommands(commands);
 
         // Try to run each command in order.  Stop if a command fails.
         for (Command cmd : parsedCommands) {
@@ -67,18 +95,6 @@ public class NanoDBServer {
     }
 
 
-    public static CommandResult doCommand(String command,
-        boolean includeTuples) throws RecognitionException, TokenStreamException {
-
-        StringReader strReader = new StringReader(command);
-        NanoSqlLexer lexer = new NanoSqlLexer(strReader);
-        NanoSqlParser parser = new NanoSqlParser(lexer);
-
-        Command parsedCommand = parser.command();
-        return doCommand(parsedCommand, includeTuples);
-    }
-
-
     public static CommandResult doCommand(Command command,
                                           boolean includeTuples) {
 
@@ -87,9 +103,15 @@ public class NanoDBServer {
         if (includeTuples && command instanceof SelectCommand)
             result.collectSelectResults((SelectCommand) command);
 
+        EventDispatcher eventDispatch = EventDispatcher.getInstance();
         result.startExecution();
         try {
+            // Execute the command, but fire before- and after-command handlers
+            // when we execute it.
+
+            eventDispatch.fireBeforeCommandExecuted(command);
             command.execute();
+            eventDispatch.fireAfterCommandExecuted(command);
         }
         catch (Exception e) {
             result.recordFailure(e);

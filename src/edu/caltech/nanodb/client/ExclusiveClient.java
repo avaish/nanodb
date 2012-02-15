@@ -123,6 +123,7 @@ public class ExclusiveClient {
             }
 
             // Persist all database changes.
+            /*
             try {
                 StorageManager.getInstance().closeAllOpenTables();
             }
@@ -131,6 +132,7 @@ public class ExclusiveClient {
                     e.getMessage());
                 logger.error("IO error while closing open tables", e);
             }
+            */
         }
 
         // Shut down the various database subsystems that require cleanup.

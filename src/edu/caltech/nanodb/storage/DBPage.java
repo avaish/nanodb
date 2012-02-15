@@ -859,6 +859,11 @@ public class DBPage {
             value = readVarString65535(position);
             break;
 
+        case FILE_POINTER:
+            value = new FilePointer(readUnsignedShort(position),
+                                    readUnsignedShort(position + 2));
+            break;
+
         default:
             throw new UnsupportedOperationException(
                 "Cannot currently read type " + colType.getBaseType());
@@ -963,6 +968,15 @@ public class DBPage {
                 String strVal = TypeConverter.getStringValue(value);
                 writeVarString65535(position, strVal);
                 dataSize = 2 + strVal.length();
+                break;
+            }
+
+        case FILE_POINTER:
+            {
+                FilePointer fptr = (FilePointer) value;
+                writeShort(position, fptr.getPageNo());
+                writeShort(position + 2, fptr.getOffset());
+                dataSize = 4;
                 break;
             }
 

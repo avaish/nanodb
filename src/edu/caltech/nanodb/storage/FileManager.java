@@ -225,6 +225,7 @@ public class FileManager {
                 long oldLength = fileContents.length();
                 if (oldLength < newLength) {
                     fileContents.setLength(newLength);
+                    logger.debug("Set file " + dbFile + " length to " + newLength);
                 }
                 else {
                     String msg = "Expected DB file to be less than " +

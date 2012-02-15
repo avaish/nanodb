@@ -10,25 +10,35 @@ import java.util.HashSet;
 /**
  * This class represents a set of columns in a schema by specifying the indexes
  * of the columns in the key.  This is used to represent primary keys, candidate
- * keys, foreign keys, and columns in general indexes.
- *
- * a primary key or other unique key, specifying the
- * indexes of the columns in the key.  The class also specifies the index
- * used to enforce the key in the database.
+ * keys, foreign keys, and columns in general non-unique indexes.
  */
 public class ColumnIndexes {
+    /**
+     * This is the actual name for referring to the index.  It is mapped to an
+     * index filename, where the index is actually stored.
+     */
+    private String indexName;
+
+
     /** This array holds the indexes of the columns in the key. */
     private int[] colIndexes;
 
 
     public ColumnIndexes(int[] colIndexes) {
+        this(null, colIndexes);
+    }
+
+
+    public ColumnIndexes(String indexName, int[] colIndexes) {
         if (colIndexes == null)
             throw new IllegalArgumentException("colIndexes must be specified");
-        
+
         if (colIndexes.length == 0) {
             throw new IllegalArgumentException(
                 "colIndexes must have at least one element");
         }
+
+        this.indexName = indexName;
 
         // Make sure that no column-index values are duplicated, and that none
         // are negative values.
@@ -99,7 +109,18 @@ public class ColumnIndexes {
 
         return indexes.isEmpty();
     }
-    
+
+
+    public String getIndexName() {
+        return indexName;
+    }
+
+
+    public void setIndexName(String indexName) {
+        this.indexName = indexName;
+    }
+
+
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder();

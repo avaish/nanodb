@@ -423,7 +423,7 @@ public class HeapFileTableManager implements TableManager {
         // This should always be specified.
         String indexName = hpReader.readVarString255();
         
-        KeyColumnIndexes key = new KeyColumnIndexes(keyCols, indexName);
+        KeyColumnIndexes key = new KeyColumnIndexes(indexName, keyCols);
         key.setConstraintName(constraintName);
         
         return key;
@@ -688,7 +688,7 @@ public class HeapFileTableManager implements TableManager {
 
             int freeSpace = DataPage.getFreeSpaceInPage(dbPage);
 
-            logger.debug(String.format("Page %d has %d bytes of free space.",
+            logger.trace(String.format("Page %d has %d bytes of free space.",
                 pageNo, freeSpace));
 
             // If this page has enough free space to add a new tuple, break

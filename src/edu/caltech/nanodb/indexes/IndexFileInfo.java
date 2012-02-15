@@ -1,8 +1,18 @@
 package edu.caltech.nanodb.indexes;
 
 
+import edu.caltech.nanodb.relations.ColumnIndexes;
+import edu.caltech.nanodb.relations.ColumnInfo;
+import edu.caltech.nanodb.relations.ColumnType;
+import edu.caltech.nanodb.relations.SQLDataType;
+import edu.caltech.nanodb.relations.TableSchema;
 import edu.caltech.nanodb.storage.DBFile;
 import edu.caltech.nanodb.storage.DBFileType;
+import edu.caltech.nanodb.storage.TableFileInfo;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 
 /**
@@ -16,8 +26,8 @@ public class IndexFileInfo {
     private String indexName;
 
 
-    /** The name of the table the index is against. */
-    private String tableName;
+    /** The details of the table that the index is built against. */
+    private TableFileInfo tblFileInfo;
 
 
     /** The actual details about what columns are in the index, etc. */
@@ -42,15 +52,34 @@ public class IndexFileInfo {
     private DBFile dbFile;
 
 
-    public IndexFileInfo(String indexName, String tableName, DBFile dbFile) {
+    /**
+     * This value specifies what table-columns appear in the index, by
+     * specifying the indexes of the columns from the schema.
+     */
+    private ColumnIndexes columnIndexes;
+    
+
+    /**
+     * This array of column-info objects describes the schema of the index.
+     */
+    private ArrayList<ColumnInfo> columnInfos;
+
+
+    /**
+     * @param indexName
+     * @param tblFileInfo
+     * @param dbFile
+     */
+    public IndexFileInfo(String indexName, TableFileInfo tblFileInfo,
+                         DBFile dbFile) {
         // if (indexName == null)
         //     throw new IllegalArgumentException("indexName must be specified");
 
-        if (tableName == null)
-            throw new IllegalArgumentException("tableName must be specified");
+        if (tblFileInfo == null)
+            throw new IllegalArgumentException("tblFileInfo must be specified");
 
         this.indexName = indexName;
-        this.tableName = tableName;
+        this.tblFileInfo = tblFileInfo;
         this.dbFile = dbFile;
     }
 
@@ -63,20 +92,44 @@ public class IndexFileInfo {
      * database-file object onto this object.
      *
      * @param indexName the name of the index that this object represents
-     * @param tableName the name of the table that the index is built against
+     * @param tblFileInfo details of the table that the index is built against
      */
-    public IndexFileInfo(String indexName, String tableName, IndexInfo indexInfo) {
+    public IndexFileInfo(String indexName, TableFileInfo tblFileInfo,
+                         IndexInfo indexInfo) {
         // if (indexName == null)
         //     throw new IllegalArgumentException("indexName must be specified");
 
-        if (tableName == null)
-            throw new IllegalArgumentException("tableName must be specified");
+        if (tblFileInfo == null)
+            throw new IllegalArgumentException("tblFileInfo must be specified");
 
         this.indexName = indexName;
-        this.tableName = tableName;
+        this.tblFileInfo = tblFileInfo;
         this.indexInfo = indexInfo;
+
+
     }
-    
+
+
+    /**
+     *
+     * @param schema the table-schema object for the table that the index is
+     *        defined on.
+     *
+     * @param indexName the unique name of the index.
+     */
+    private void initIndexDetails(TableSchema schema, String indexName) {
+        columnIndexes = schema.getIndexes().get(indexName);
+        if (columnIndexes == null) {
+            throw new IllegalArgumentException("No index named " + indexName +
+                " on schema " + schema);
+        }
+
+        // Get the schema of the index so that we can interpret the key-values.
+        columnInfos = schema.getColumnInfos(columnIndexes);
+        columnInfos.add(new ColumnInfo("#TUPLE_FP",
+            new ColumnType(SQLDataType.FILE_POINTER)));
+    }
+
     
     public DBFileType getIndexType() {
         return indexType;
@@ -139,10 +192,32 @@ public class IndexFileInfo {
      * @return the associated table name
      */
     public String getTableName() {
-        return tableName;
+        return tblFileInfo.getTableName();
     }
-    
-    
+
+
+    public List<ColumnInfo> getIndexSchema() {
+        if (columnInfos == null)
+            initIndexDetails(tblFileInfo.getSchema(), indexName);
+
+        return Collections.unmodifiableList(columnInfos);
+    }
+
+
+    public ColumnIndexes getTableColumnIndexes() {
+        if (columnIndexes == null)
+            initIndexDetails(tblFileInfo.getSchema(), indexName);
+
+        return columnIndexes;
+    }
+
+
+
+    public IndexManager getIndexManager() {
+        return indexManager;
+    }
+
+
     public void setIndexManager(IndexManager indexManager) {
         this.indexManager = indexManager;
     }

@@ -5,6 +5,7 @@ import java.io.IOException;
 
 import edu.caltech.nanodb.expressions.Expression;
 
+import edu.caltech.nanodb.expressions.TupleLiteral;
 import edu.caltech.nanodb.qeval.Planner;
 import edu.caltech.nanodb.qeval.SimplePlanner;
 import edu.caltech.nanodb.qeval.TupleProcessor;
@@ -13,21 +14,25 @@ import edu.caltech.nanodb.relations.Schema;
 import edu.caltech.nanodb.relations.SchemaNameException;
 import edu.caltech.nanodb.relations.Tuple;
 
+import edu.caltech.nanodb.server.EventDispatcher;
 import edu.caltech.nanodb.storage.StorageManager;
 import edu.caltech.nanodb.storage.TableFileInfo;
 import edu.caltech.nanodb.storage.TableManager;
 
 
 /**
+ * <p>
  * This command object represents a top-level <tt>DELETE</tt> command issued
  * against the database.  <tt>DELETE</tt> commands are pretty simple, having a
  * single form:   <tt>DELETE FROM ... [WHERE ...]</tt>.
+ * </p>
  * <p>
  * Execution of this command is relatively straightforward; the real nuance is
  * that we can treat it as a "select for deletion", and possibly perform the
  * deletion in an optimized manner (particularly if the <tt>WHERE</tt> clause
  * contains subqueries).  Internally, we treat it as a <tt>SELECT</tt>, and
  * each row returned is deleted from the specified table.
+ * </p>
  */
 public class DeleteCommand extends QueryCommand {
 
@@ -42,6 +47,10 @@ public class DeleteCommand extends QueryCommand {
         /** The table whose tuples will be deleted. */
         private TableFileInfo tblFileInfo;
 
+        /** The event-dispatcher singleton for firing row-delete events. */
+        private EventDispatcher eventDispatch;
+
+
         /**
          * Initialize the tuple-remover object with the details it needs to
          * delete tuples from the specified table.
@@ -51,6 +60,7 @@ public class DeleteCommand extends QueryCommand {
         public TupleRemover(TableFileInfo tblFileInfo) {
             this.tblFileInfo = tblFileInfo;
             this.tableMgr = tblFileInfo.getTableManager();
+            this.eventDispatch = EventDispatcher.getInstance();
         }
 
         /** This tuple-processor implementation doesn't care about the schema. */
@@ -60,7 +70,14 @@ public class DeleteCommand extends QueryCommand {
 
         /** This implementation simply deletes each tuple it is handed. */
         public void process(Tuple tuple) throws IOException {
+
+            // Make a copy of this, because once we delete the tuple, we can't
+            // use the "tuple" variable anymore!
+            TupleLiteral oldTuple = new TupleLiteral(tuple);
+
+            eventDispatch.fireBeforeRowDeleted(tblFileInfo, tuple);
             tableMgr.deleteTuple(tblFileInfo, tuple);
+            eventDispatch.fireAfterRowDeleted(tblFileInfo, oldTuple);
         }
     }
 

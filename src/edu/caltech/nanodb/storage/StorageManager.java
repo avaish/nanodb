@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 
+import edu.caltech.nanodb.server.EventDispatcher;
 import org.apache.log4j.Logger;
 
 import edu.caltech.nanodb.indexes.IndexFileInfo;
@@ -12,6 +13,7 @@ import edu.caltech.nanodb.indexes.IndexManager;
 
 import edu.caltech.nanodb.relations.TableConstraintType;
 
+import edu.caltech.nanodb.storage.btreeindex.BTreeIndexManager;
 import edu.caltech.nanodb.storage.heapfile.HeapFileTableManager;
 
 
@@ -75,6 +77,11 @@ public class StorageManager {
         File baseDir = new File(baseDirPath);
 
         storageMgr = new StorageManager(baseDir);
+        storageMgr.finishInit();
+
+        // Register the component that manages indexes when tables are modified.
+        EventDispatcher.getInstance().addRowEventListener(
+            new IndexUpdater(storageMgr));
     }
 
 
@@ -215,19 +222,27 @@ public class StorageManager {
         }
 
         logger.info("Using base directory " + baseDir);
-
         this.baseDir = baseDir;
 
         fileManager = new FileManager(baseDir);
         bufferManager = new BufferManager(fileManager);
+    }
 
+
+    private void finishInit() {
         initFileTypeManagers();
     }
 
 
     private void initFileTypeManagers() {
+        // fileTypeManagers.put(DBFileType.WRITE_AHEAD_LOG_FILE,
+        //     new WALManager(this));
+
         fileTypeManagers.put(DBFileType.HEAP_DATA_FILE,
             new HeapFileTableManager(this));
+
+        fileTypeManagers.put(DBFileType.BTREE_INDEX_FILE,
+            new BTreeIndexManager(this));
     }
 
 
@@ -716,10 +731,10 @@ public class StorageManager {
         logger.debug(String.format("Type is %s, page size is %d bytes.",
             type, dbFile.getPageSize()));
 
-        idxFileInfo = new IndexFileInfo(indexName, null, dbFile);
+        idxFileInfo = new IndexFileInfo(indexName, tblFileInfo, dbFile);
         idxFileInfo.setIndexManager(idxManager);
 
-        // Cache this table since it's now considered "open".
+        // Cache this index since it's now considered "open".
         openIndexes.put(indexName, idxFileInfo);
 
         // Defer to the appropriate index-manager to read in the remainder of

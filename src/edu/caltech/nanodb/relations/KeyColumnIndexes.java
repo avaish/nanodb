@@ -12,20 +12,15 @@ public class KeyColumnIndexes extends ColumnIndexes {
     private String constraintName;
 
 
-    /** This is the name of the index that is used to enforce the key. */
-    private String indexName;
-
-
-    public KeyColumnIndexes(int[] colIndexes, String indexName) {
-        super(colIndexes);
-        this.indexName = indexName;
+    public KeyColumnIndexes(String indexName, int[] colIndexes) {
+        super(indexName, colIndexes);
     }
 
 
     public KeyColumnIndexes(int[] colIndexes) {
-        this(colIndexes, null);
+        super(colIndexes);
     }
-    
+
     
     public String getConstraintName() {
         return constraintName;
@@ -34,15 +29,5 @@ public class KeyColumnIndexes extends ColumnIndexes {
     
     public void setConstraintName(String constraintName) {
         this.constraintName = constraintName;
-    }
-
-
-    public String getIndexName() {
-        return indexName;
-    }
-    
-    
-    public void setIndexName(String indexName) {
-        this.indexName = indexName;
     }
 }

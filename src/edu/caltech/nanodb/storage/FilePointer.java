@@ -17,6 +17,9 @@ package edu.caltech.nanodb.storage;
  */
 public class FilePointer implements Comparable<FilePointer>, Cloneable {
 
+    public static final FilePointer ZERO_FILE_POINTER = new FilePointer(0, 0);
+
+
     /** The page number in the table file.  This value is nonnegative. */
     private int pageNo;
 
@@ -50,6 +53,12 @@ public class FilePointer implements Comparable<FilePointer>, Cloneable {
     /** Returns the offset within the page where the data starts. */
     public int getOffset() {
         return offset;
+    }
+
+
+    @Override
+    public String toString() {
+        return String.format("FP[%d:%d]", pageNo, offset);
     }
 
 

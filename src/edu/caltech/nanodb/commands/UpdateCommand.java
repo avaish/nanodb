@@ -10,6 +10,7 @@ import java.util.List;
 import edu.caltech.nanodb.expressions.Environment;
 import edu.caltech.nanodb.expressions.Expression;
 
+import edu.caltech.nanodb.expressions.TupleLiteral;
 import edu.caltech.nanodb.qeval.Planner;
 import edu.caltech.nanodb.qeval.SimplePlanner;
 import edu.caltech.nanodb.qeval.TupleProcessor;
@@ -18,6 +19,7 @@ import edu.caltech.nanodb.relations.Schema;
 import edu.caltech.nanodb.relations.SchemaNameException;
 import edu.caltech.nanodb.relations.Tuple;
 
+import edu.caltech.nanodb.server.EventDispatcher;
 import edu.caltech.nanodb.storage.StorageManager;
 import edu.caltech.nanodb.storage.TableFileInfo;
 import edu.caltech.nanodb.storage.TableManager;
@@ -39,6 +41,9 @@ public class UpdateCommand extends QueryCommand {
 
         /** The table whose tuples will be modified. */
         private TableFileInfo tblFileInfo;
+
+        /** The event-dispatcher singleton for firing row-update events. */
+        private EventDispatcher eventDispatch;
 
         /**
          * This is the list of values to change in the <tt>UPDATE</tt> statement.
@@ -79,6 +84,8 @@ public class UpdateCommand extends QueryCommand {
 
             // Retrieve this value since we use it over and over again.
             this.tableMgr = tblFileInfo.getTableManager();
+
+            this.eventDispatch = EventDispatcher.getInstance();
         }
 
         /**
@@ -96,16 +103,32 @@ public class UpdateCommand extends QueryCommand {
          * set of update-specs that were given in the constructor.
          */
         public void process(Tuple tuple) throws IOException {
+
+            // Figure out what the new values should be for the tuple we are
+            // processing.
+
             environment.clear();
             environment.addTuple(schema, tuple);
+
+            // Make copies of the old and new tuple-values so that we can pass
+            // them to the before- and after-update handlers.
+            TupleLiteral oldTuple = new TupleLiteral(tuple);
+            TupleLiteral newTuple = new TupleLiteral(tuple);
 
             newValues.clear();
             for (UpdateValue value : values) {
                 Object result = value.getExpression().evaluate(environment);
                 newValues.put(value.getColumnName(), result);
+
+                // TODO:  Should probably coerce to the specific column type
+                //        specified in the table's schema...
+                newTuple.setColumnValue(
+                    schema.getColumnIndex(value.getColumnName()), result);
             }
 
+            eventDispatch.fireBeforeRowUpdated(tblFileInfo, tuple, newTuple);
             tableMgr.updateTuple(tblFileInfo, tuple, newValues);
+            eventDispatch.fireAfterRowUpdated(tblFileInfo, oldTuple, tuple);
         }
     }
 

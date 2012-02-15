@@ -493,7 +493,11 @@ public class TypeConverter {
         throws TypeCastException {
 
         if (obj1 != null && obj2 != null) {
-            if (obj1 instanceof Number || obj2 instanceof Number) {
+            if (obj1.getClass().equals(obj2.getClass())) {
+                // The two objects are already of the same type, so no need
+                // to coerce anything.
+            }
+            else if (obj1 instanceof Number || obj2 instanceof Number) {
                 // Reuse the same logic in the arithmetic coercion code.
                 return coerceArithmetic(obj1, obj2);
             }
@@ -506,6 +510,8 @@ public class TypeConverter {
                 obj2 = getStringValue(obj2);
             }
             else {
+                // Inputs are different types, and we don't know how to make
+                // them the same.
                 throw new TypeCastException(String.format(
                     "Cannot coerce types \"%s\" and \"%s\" for comparison.",
                     obj1.getClass(), obj2.getClass()));

@@ -52,6 +52,8 @@ Definition of parser NanoSqlParser, which is a subclass of LLkParser.
 		|	<a href="NanoSqlParser.html#analyze_stmt">analyze_stmt</a> 
 		|	<a href="NanoSqlParser.html#explain_stmt">explain_stmt</a> 
 		|	<a href="NanoSqlParser.html#exit_stmt">exit_stmt</a> 
+		|	<a href="NanoSqlParser.html#verify_stmt">verify_stmt</a> 
+		|	<a href="NanoSqlParser.html#optimize_stmt">optimize_stmt</a> 
 		) 
 	;
 
@@ -167,6 +169,16 @@ Definition of parser NanoSqlParser, which is a subclass of LLkParser.
 		|	QUIT 
 		) 
 		
+	;
+
+
+<a name="verify_stmt">verify_stmt</a>
+	:	VERIFY <a href="NanoSqlParser.html#dbobj_ident">dbobj_ident</a> ( COMMA <a href="NanoSqlParser.html#dbobj_ident">dbobj_ident</a> )* 
+	;
+
+
+<a name="optimize_stmt">optimize_stmt</a>
+	:	OPTIMIZE <a href="NanoSqlParser.html#dbobj_ident">dbobj_ident</a> ( COMMA <a href="NanoSqlParser.html#dbobj_ident">dbobj_ident</a> )* 
 	;
 
 

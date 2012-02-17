@@ -74,6 +74,7 @@ tokens {
   NOT         = "not";
   NULL        = "null";
   ON          = "on";
+  OPTIMIZE    = "optimize";
   OR          = "or";
   ORDER       = "order";
   OUTER       = "outer";
@@ -101,6 +102,7 @@ tokens {
   VALUES      = "values";
   VARIANCE    = "variance";
   VERBOSE     = "verbose";
+  VERIFY      = "verify";
   VIEW        = "view";
   WHERE       = "where";
   WORK        = "work";
@@ -168,6 +170,7 @@ command returns [Command c] { c = null; } :
   | c=select_stmt | c=insert_stmt | c=update_stmt | c=delete_stmt  // DML
   | c=begin_txn_stmt | c=commit_txn_stmt | c=rollback_txn_stmt     // Transactions
   | c=analyze_stmt | c=explain_stmt | c=exit_stmt                  // Utility
+  | c=verify_stmt | c=optimize_stmt                                // Utility
   )
   ;
 
@@ -666,6 +669,30 @@ explain_stmt returns [Command c]
   EXPLAIN ( cmdToExplain=select_stmt | cmdToExplain=insert_stmt
           | cmdToExplain=update_stmt | cmdToExplain=delete_stmt )
   { c = new ExplainCommand(cmdToExplain); }
+  ;
+
+
+/* VERIFY Statements */
+
+verify_stmt returns [VerifyCommand c]
+  {
+    c = null;
+    String tblName = null;
+  } :
+  VERIFY tblName=dbobj_ident { c = new VerifyCommand(tblName); }
+  ( COMMA tblName=dbobj_ident { c.addTable(tblName); } )*
+  ;
+
+
+/* OPTIMIZE Statements */
+
+optimize_stmt returns [OptimizeCommand c]
+  {
+    c = null;
+    String tblName = null;
+  } :
+  OPTIMIZE tblName=dbobj_ident { c = new OptimizeCommand(tblName); }
+  ( COMMA tblName=dbobj_ident { c.addTable(tblName); } )*
   ;
 
 

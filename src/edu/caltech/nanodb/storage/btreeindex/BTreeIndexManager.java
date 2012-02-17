@@ -231,6 +231,15 @@ public class BTreeIndexManager implements IndexManager {
     }
 
 
+    @Override
+    public List<String> verifyIndex(IndexFileInfo idxFileInfo) throws IOException {
+        BTreeIndexVerifier verifier = new BTreeIndexVerifier(idxFileInfo);
+        List<String> errors = verifier.verify();
+
+        return errors;
+    }
+
+
     /**
      * This helper method performs the common task of navigating from the root
      * of the B<sup>+</sup> tree down to the appropriate leaf node, based on

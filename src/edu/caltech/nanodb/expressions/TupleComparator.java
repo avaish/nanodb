@@ -276,7 +276,7 @@ public class TupleComparator implements Comparator<Tuple> {
 
         int t1Size = t1.getColumnCount();
         int t2Size = t2.getColumnCount();
-        
+
         int i = 0;
         while (compareResult == 0) {
             // Examine the sizes first.
@@ -329,6 +329,8 @@ public class TupleComparator implements Comparator<Tuple> {
             else {
                 compareResult = valueA.compareTo(valueB);
             }
+
+            i++;
         }
 
         return compareResult;

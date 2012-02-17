@@ -8,6 +8,7 @@ import edu.caltech.nanodb.storage.FilePointer;
 import edu.caltech.nanodb.storage.PageTuple;
 
 import java.io.IOException;
+import java.util.List;
 
 
 /**
@@ -75,4 +76,15 @@ public interface IndexManager {
      *         tuple.
      */
     void deleteTuple(IndexFileInfo idxFileInfo, PageTuple tup) throws IOException;
+
+
+    /**
+     * This function allows an index to be verified for proper structure and
+     * contents.
+     *
+     * @param idxFileInfo the index to verify
+     *
+     * @throws IOException if an IO error occurs while verifying the index
+     */
+    List<String> verifyIndex(IndexFileInfo idxFileInfo) throws IOException;
 }

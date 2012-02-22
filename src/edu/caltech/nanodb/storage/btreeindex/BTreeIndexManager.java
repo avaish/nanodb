@@ -322,20 +322,45 @@ public class BTreeIndexManager implements IndexManager {
         if (pageType != BTREE_INNER_PAGE && pageType != BTREE_LEAF_PAGE)
             throw new IOException("Invalid page type encountered:  " + pageType);
 
-        /* TODO:  IMPLEMENT THE REST OF THIS METHOD.
-         *
-         * Don't forget to update the page-path as you navigate the index
-         * structure, if it is provided by the caller.
-         * 
-         * Use the TupleComparator.comparePartialTuples() method for comparing
-         * the index's keys with the passed-in search key.
-         * 
-         * It's always a good idea to code defensively:  if you see an invalid
-         * page-type, flag it with an IOException, as done earlier.
-         */
-        logger.error("NOT YET IMPLEMENTED:  navigateToLeafPage()");
+        while (pageType != BTREE_LEAF_PAGE)
+        {
+        	if (pagePath != null) {
+        		pagePath.add(dbPage.getPageNo());
+        	}
+        	
+        	InnerPage innerPage = new InnerPage(dbPage, idxFileInfo);
+        	int next_pointer = -1;
+        	
+        	for (int i = 0; i < innerPage.getNumKeys(); i++) {
+        		int compare = TupleComparator.comparePartialTuples(searchKey, 
+        			innerPage.getKey(i));
+        		
+        		if (compare == 0) {
+        			next_pointer = i + 1;
+        			break;
+        		}
+        		else if (compare < 0) {
+        			next_pointer = i;
+        			break;
+        		}
+        	}
+        	
+        	if (next_pointer == -1) {
+        		next_pointer = innerPage.getNumPointers() - 1;
+        	}
+        	
+        	dbPage = storageManager.loadDBPage(dbFile, next_pointer);
+        	pageType = dbPage.readByte(0);
+        	if (pageType != BTREE_INNER_PAGE && pageType != BTREE_LEAF_PAGE)
+                throw new IOException("Invalid page type encountered:  " + pageType);
+        }
         
-        return null;
+        if (pagePath != null) {
+    		pagePath.add(dbPage.getPageNo());
+    	}
+        
+        assert(pageType == BTREE_LEAF_PAGE);
+        return new LeafPage(dbPage, idxFileInfo);
     }
 
 

@@ -1,7 +1,6 @@
 package edu.caltech.nanodb.indexes;
 
 
-import edu.caltech.nanodb.indexes.IndexType;
 import edu.caltech.nanodb.relations.ColumnIndexes;
 import edu.caltech.nanodb.relations.Schema;
 import edu.caltech.nanodb.relations.TableConstraintType;

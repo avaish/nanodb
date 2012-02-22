@@ -93,13 +93,14 @@ public class CreateIndexCommand extends Command {
                 "Error occurred while opening table %s", tableName), e);
         }
 
-        // Look up each column mentioned in the index.
+        // TODO:  Look up each column mentioned in the index, and build up the
+        //        details of the index.
         TableSchema schema = tblFileInfo.getSchema();
 
         logger.debug(String.format("Creating an IndexFileInfo object " +
             "describing the new index %s on table %s.", indexName, tableName));
         IndexFileInfo idxFileInfo =
-            new IndexFileInfo(indexName, tableName, (IndexInfo) null);
+            new IndexFileInfo(indexName, tblFileInfo, (IndexInfo) null);
 
         if (indexName == null) {
             // This is an unnamed index.
@@ -127,6 +128,9 @@ public class CreateIndexCommand extends Command {
                         "nested exception for details.", indexName, tableName), e);
             }
         }
+
+        // TODO:  Store the index info on the table.
+        // schema.addIndex();
 
         indexName = idxFileInfo.getIndexName();
         logger.debug(String.format("New index %s on table %s is created!",

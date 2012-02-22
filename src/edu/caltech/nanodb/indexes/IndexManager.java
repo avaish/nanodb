@@ -8,6 +8,7 @@ import edu.caltech.nanodb.storage.FilePointer;
 import edu.caltech.nanodb.storage.PageTuple;
 
 import java.io.IOException;
+import java.util.List;
 
 
 /**
@@ -48,23 +49,24 @@ public interface IndexManager {
 
 
     /**
-     * This method adds a tuple to an index, and returns an index-pointer to
-     * where the tuple was added.
+     * This method adds a tuple to an index.  The tuple must be a
+     * {@link PageTuple} since the file-pointer to the tuple must be stored
+     * into the index.
      *
      * @param idxFileInfo the index to add the tuple to
      *
      * @param tup the tuple to add to the index
      *
-     * @return a pointer to where the tuple is stored in the index
-     *
      * @throws IOException if an IO error occurs when attempting to add the
      *         tuple.
      */
-    IndexPointer addTuple(IndexFileInfo idxFileInfo, TableSchema schema,
-                          ColumnIndexes colIndexes, PageTuple tup) throws IOException;
+    void addTuple(IndexFileInfo idxFileInfo, PageTuple tup) throws IOException;
+
 
     /**
-     * This method deletes a tuple from an index.
+     * This method deletes a tuple from an index.  The tuple must be a
+     * {@link PageTuple} since the file-pointer to the tuple must be removed
+     * from the index.
      *
      * @param idxFileInfo the index to delete the tuple from
      *
@@ -73,5 +75,16 @@ public interface IndexManager {
      * @throws IOException if an IO error occurs when attempting to delete the
      *         tuple.
      */
-    void deleteTuple(IndexFileInfo idxFileInfo, Tuple tup) throws IOException;
+    void deleteTuple(IndexFileInfo idxFileInfo, PageTuple tup) throws IOException;
+
+
+    /**
+     * This function allows an index to be verified for proper structure and
+     * contents.
+     *
+     * @param idxFileInfo the index to verify
+     *
+     * @throws IOException if an IO error occurs while verifying the index
+     */
+    List<String> verifyIndex(IndexFileInfo idxFileInfo) throws IOException;
 }

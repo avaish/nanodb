@@ -43,13 +43,31 @@ public class TableSchema extends Schema {
 
 
     /**
+     * This collection provides easy access to all the indexes defined on this
+     * table, including those for candidate keys and the primary key.
+     */
+    private HashMap<String, ColumnIndexes> indexes =
+        new HashMap<String, ColumnIndexes>();
+
+
+    /**
      * Sets the primary key on this table.
      *
      * @param pk the primary key to set on the table, or <tt>null</tt> if the
      *        table has no primary key.
      */
     public void setPrimaryKey(KeyColumnIndexes pk) {
+        if (pk == null)
+            throw new IllegalArgumentException("pk cannot be null");
+
+        if (pk.getIndexName() == null)
+            throw new IllegalArgumentException("pk must specify an index name");
+
+        if (primaryKey != null)
+            throw new IllegalStateException("Table already has a primary key");
+        
         primaryKey = pk;
+        indexes.put(pk.getIndexName(), pk);
     }
 
 
@@ -66,13 +84,31 @@ public class TableSchema extends Schema {
 
 
     public void addCandidateKey(KeyColumnIndexes ck) {
+        if (ck == null)
+            throw new IllegalArgumentException("ck cannot be null");
+        
+        if (ck.getIndexName() == null)
+            throw new IllegalArgumentException("ck must specify an index name");
+
         if (candidateKeys == null)
             candidateKeys = new ArrayList<KeyColumnIndexes>();
 
         candidateKeys.add(ck);
+        indexes.put(ck.getIndexName(), ck);
     }
-    
-    
+
+
+    public void addIndex(ColumnIndexes index) {
+        if (index == null)
+            throw new IllegalArgumentException("index cannot be null");
+
+        if (index.getIndexName() == null)
+            throw new IllegalArgumentException("index must specify an index name");
+
+        indexes.put(index.getIndexName(), index);
+    }
+
+
     public int numCandidateKeys() {
         return candidateKeys.size();
     }
@@ -126,6 +162,11 @@ public class TableSchema extends Schema {
     }
 
 
+    public Map<String, ColumnIndexes> getIndexes() {
+        return Collections.unmodifiableMap(indexes);
+    }
+
+
     private int[] getColumnIndexes(List<String> columnNames) {
         int[] result = new int[columnNames.size()];
         HashSet<String> s = new HashSet<String>();
@@ -154,15 +195,16 @@ public class TableSchema extends Schema {
 
 
     /**
-     * This method constructs a <tt>KeyColumns</tt> object that includes the
-     * columns named in the input list.  Note that this method <u>does not</u>
-     * update the schema stored on disk, or create any other supporting files.
+     * This method constructs a <tt>KeyColumnIndexes</tt> object that includes
+     * the columns named in the input list.  Note that this method <u>does
+     * not</u> update the schema stored on disk, or create any other supporting
+     * files.
      * 
      * @param columnNames a list of column names that are in the key
      *
-     * @return a new <tt>KeyColumns</tt> object with the indexes of the columns
-     *         stored in the object
-     *         
+     * @return a new <tt>KeyColumnIndexes</tt> object with the indexes of the
+     *         columns stored in the object
+     *
      * @throws SchemaNameException if a column-name cannot be found, or if a
      *         column-name is ambiguous (unlikely), or if a column is specified
      *         multiple times in the input list.
@@ -175,7 +217,7 @@ public class TableSchema extends Schema {
             throw new IllegalArgumentException(
                 "columnNames must specify at least one column");
         }
-        
+
         return new KeyColumnIndexes(getColumnIndexes(columnNames));
     }
 

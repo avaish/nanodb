@@ -5,6 +5,7 @@ import edu.caltech.nanodb.relations.ColumnInfo;
 import edu.caltech.nanodb.relations.Tuple;
 
 import edu.caltech.nanodb.storage.DBPage;
+import edu.caltech.nanodb.storage.FilePointer;
 import edu.caltech.nanodb.storage.PageTuple;
 import edu.caltech.nanodb.storage.TableFileInfo;
 
@@ -49,6 +50,18 @@ public class HeapFilePageTuple extends PageTuple {
         }
 
         this.slot = slot;
+    }
+
+
+    /**
+     * This method returns an external reference to the tuple, which references
+     * the page number and slot-offset of the tuple.
+     *
+     * @return a file-pointer that can be used to look up this tuple
+     */
+    public FilePointer getExternalReference() {
+        return new FilePointer(getDBPage().getPageNo(),
+                               DataPage.getSlotOffset(slot));
     }
 
 

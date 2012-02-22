@@ -59,6 +59,11 @@ public class DataPage {
         setPointer(dbPage, dbPage.getDBFile().getNumPages() + 1);
     }
 
+    
+    public static int getSlotOffset(int slot) {
+        return (1 + slot) * 2;
+    }
+    
 
     /**
      * Returns the number of slots in this data page.  This can be considered
@@ -97,11 +102,9 @@ public class DataPage {
      *         happens to be the size of the slot-table in bytes.
      */
     public static int getSlotsEndIndex(DBPage dbPage) {
-        int numSlots = getNumSlots(dbPage);
-
-        // The count at the start is two bytes, and each slot's offset is two
-        // bytes.
-        return (1 + numSlots) * 2;
+        // Slots are at indexes [0, numSlots), so just pass the total number of
+        // slots into the helper function.
+        return getSlotOffset(getNumSlots(dbPage));
     }
 
 
@@ -127,7 +130,7 @@ public class DataPage {
                 numSlots + ").  Got " + slot);
         }
 
-        return dbPage.readUnsignedShort((1 + slot) * 2);
+        return dbPage.readUnsignedShort(getSlotOffset(slot));
     }
 
 
@@ -152,7 +155,7 @@ public class DataPage {
                 numSlots + ").  Got " + slot);
         }
 
-        dbPage.writeShort((1 + slot) * 2, value);
+        dbPage.writeShort(getSlotOffset(slot), value);
     }
 
 

@@ -14,6 +14,7 @@ import edu.caltech.nanodb.qeval.TupleProcessor;
 import edu.caltech.nanodb.relations.Schema;
 import edu.caltech.nanodb.relations.SchemaNameException;
 import edu.caltech.nanodb.relations.Tuple;
+import edu.caltech.nanodb.server.EventDispatcher;
 import edu.caltech.nanodb.storage.StorageManager;
 import edu.caltech.nanodb.storage.TableFileInfo;
 import edu.caltech.nanodb.storage.TableManager;
@@ -44,6 +45,9 @@ public class InsertCommand extends QueryCommand {
         /** The table into which the new tuples will be inserted. */
         private TableFileInfo tblFileInfo;
 
+        /** The event-dispatcher singleton for firing row-insert events. */
+        private EventDispatcher eventDispatch;
+
         /**
          * Initialize the tuple-inserter object with the details it needs to
          * insert tuples into the specified table.
@@ -56,6 +60,8 @@ public class InsertCommand extends QueryCommand {
             // Pull out the table manager right away, since we will use it over
             // and over again.
             this.tableMgr = tblFileInfo.getTableManager();
+
+            this.eventDispatch = EventDispatcher.getInstance();
         }
 
         /**
@@ -70,7 +76,9 @@ public class InsertCommand extends QueryCommand {
 
         /** This implementation simply inserts each tuple it is handed. */
         public void process(Tuple tuple) throws IOException {
-            tableMgr.addTuple(tblFileInfo, tuple);
+            eventDispatch.fireBeforeRowInserted(tblFileInfo, tuple);
+            Tuple newTuple = tableMgr.addTuple(tblFileInfo, tuple);
+            eventDispatch.fireAfterRowInserted(tblFileInfo, newTuple);
         }
     }
 
@@ -193,9 +201,13 @@ public class InsertCommand extends QueryCommand {
             }
         }
 
+        EventDispatcher eventDispatch = EventDispatcher.getInstance();
         try {
             TableManager tableMgr = tblFileInfo.getTableManager();
-            tableMgr.addTuple(tblFileInfo, tuple);
+
+            eventDispatch.fireBeforeRowInserted(tblFileInfo, tuple);
+            Tuple newTuple = tableMgr.addTuple(tblFileInfo, tuple);
+            eventDispatch.fireAfterRowInserted(tblFileInfo, newTuple);
         }
         catch (IOException e) {
             throw new ExecutionException("Couldn't insert row into table.", e);

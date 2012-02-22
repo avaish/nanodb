@@ -21,6 +21,7 @@ package edu.caltech.nanodb.relations;
  *   <li>Number types:  1..20</li>
  *   <li>Character types:  21..30</li>
  *   <li>Date/time types:  31..40</li>
+ *   <li>Miscellaneous types:  41..*</li>
  * </ul>
  */
 public enum SQLDataType {
@@ -107,7 +108,14 @@ public enum SQLDataType {
     /**
      * A date/time value with higher precision than the {@link #DATETIME} value.
      */
-    TIMESTAMP((byte) 34);
+    TIMESTAMP((byte) 34),
+
+
+    /**
+     * A file-pointer value.  This is not exposed in SQL, but is used
+     * internally.
+     */
+    FILE_POINTER((byte) 41);
 
 
     /** The ID of the datatype. */

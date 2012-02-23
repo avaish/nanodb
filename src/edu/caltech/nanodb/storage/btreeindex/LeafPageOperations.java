@@ -2,6 +2,7 @@ package edu.caltech.nanodb.storage.btreeindex;
 
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.log4j.Logger;
@@ -9,6 +10,7 @@ import org.apache.log4j.Logger;
 import edu.caltech.nanodb.expressions.TupleComparator;
 import edu.caltech.nanodb.expressions.TupleLiteral;
 import edu.caltech.nanodb.indexes.IndexFileInfo;
+import edu.caltech.nanodb.relations.Tuple;
 import edu.caltech.nanodb.storage.DBFile;
 import edu.caltech.nanodb.storage.DBPage;
 import edu.caltech.nanodb.storage.StorageManager;
@@ -378,15 +380,50 @@ public class LeafPageOperations {
         DBFile dbFile = idxFileInfo.getDBFile();
         DBPage newDBPage = bTreeManager.getNewDataPage(dbFile);
         LeafPage newLeaf = LeafPage.init(newDBPage, idxFileInfo);
+        
+        int insert = leaf.getNumEntries();
+        for (int i = 0; i < leaf.getNumEntries(); i++) {
+        	Tuple tuple = leaf.getKey(i);
+        	int cmp = TupleComparator.compareTuples(tuple, key);
+        	if (cmp > 0) {
+        		insert = i;
+        		break;
+        	}
+        }
+        
+        newLeaf.setNextPageNo(leaf.getNextPageNo());
+        leaf.setNextPageNo(newLeaf.getPageNo());
+        
+        if (insert < leaf.getNumEntries() / 2) {
+        	leaf.moveEntriesRight(newLeaf, leaf.getNumEntries() / 2 + 1);
+        	leaf.addEntry(key);
+        }
+        else {
+        	leaf.moveEntriesRight(newLeaf, leaf.getNumEntries() / 2);
+        	newLeaf.addEntry(key);
+        }
+        
+        int parentPageNo = -1;
+        if (pathSize > 1)
+            parentPageNo = pagePath.get(pathSize - 2);
+        
+        if (parentPageNo != -1) {
+        	InnerPage parent = new InnerPage(storageManager.loadDBPage(dbFile, 
+        		parentPageNo), idxFileInfo);
+        	parent.addEntry(leaf.getPageNo(), newLeaf.getKey(0), newLeaf.getPageNo());
+        }
+        else {
+        	DBPage dbpParent = bTreeManager.getNewDataPage(dbFile);
+            InnerPage parent = InnerPage.init(dbpParent, idxFileInfo,
+                leaf.getPageNo(), newLeaf.getKey(0), newLeaf.getPageNo());
 
-        /* TODO:  IMPLEMENT THE REST OF THIS METHOD.
-         *
-         * The LeafPage class provides some helpful operations for moving leaf-
-         * entries to a left or right sibling.
-         *
-         * The parent page must also be updated.  If the leaf node doesn't have
-         * a parent, the tree's depth will increase by one level.
-         */
-        logger.error("NOT YET IMPLEMENTED:  splitLeafAndAddKey()");
+            parentPageNo = parent.getPageNo();
+
+            // We have a new root-page in the index!
+            DBPage dbpHeader = storageManager.loadDBPage(dbFile, 0);
+            HeaderPage.setRootPageNo(dbpHeader, parentPageNo);
+
+            logger.debug("Set index root-page to inner-page " + parentPageNo);
+        }
     }
 }

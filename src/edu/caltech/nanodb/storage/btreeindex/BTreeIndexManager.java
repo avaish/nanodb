@@ -349,7 +349,8 @@ public class BTreeIndexManager implements IndexManager {
         		next_pointer = innerPage.getNumPointers() - 1;
         	}
         	
-        	dbPage = storageManager.loadDBPage(dbFile, next_pointer);
+        	dbPage = storageManager.loadDBPage(dbFile, 
+        		innerPage.getPointer(next_pointer));
         	pageType = dbPage.readByte(0);
         	if (pageType != BTREE_INNER_PAGE && pageType != BTREE_LEAF_PAGE)
                 throw new IOException("Invalid page type encountered:  " + pageType);

@@ -381,36 +381,21 @@ public class LeafPageOperations {
         DBPage newDBPage = bTreeManager.getNewDataPage(dbFile);
         LeafPage newLeaf = LeafPage.init(newDBPage, idxFileInfo);
         
-        int insert = leaf.getNumEntries();
-        for (int i = 0; i < leaf.getNumEntries(); i++) {
-        	Tuple tuple = leaf.getKey(i);
-        	int cmp = TupleComparator.compareTuples(tuple, key);
-        	if (cmp > 0) {
-        		insert = i;
-        		break;
-        	}
-        }
-        
         newLeaf.setNextPageNo(leaf.getNextPageNo());
         leaf.setNextPageNo(newLeaf.getPageNo());
         
-        if (insert < leaf.getNumEntries() / 2) {
-        	leaf.moveEntriesRight(newLeaf, leaf.getNumEntries() / 2 + 1);
-        	leaf.addEntry(key);
-        }
-        else {
-        	leaf.moveEntriesRight(newLeaf, leaf.getNumEntries() / 2);
-        	newLeaf.addEntry(key);
-        }
+        leaf.moveEntriesRight(newLeaf, leaf.getNumEntries() / 2);
+        addEntryToLeafPair(leaf, newLeaf, key);
         
         int parentPageNo = -1;
         if (pathSize > 1)
             parentPageNo = pagePath.get(pathSize - 2);
         
         if (parentPageNo != -1) {
-        	InnerPage parent = new InnerPage(storageManager.loadDBPage(dbFile, 
-        		parentPageNo), idxFileInfo);
-        	parent.addEntry(leaf.getPageNo(), newLeaf.getKey(0), newLeaf.getPageNo());
+        	InnerPageOperations ops = new InnerPageOperations(bTreeManager);
+        	ops.addEntry(new InnerPage(storageManager.loadDBPage(dbFile, 
+            	parentPageNo), idxFileInfo), pagePath.subList(0, pathSize - 1), 
+            	leaf.getPageNo(), newLeaf.getKey(0), newLeaf.getPageNo());
         }
         else {
         	DBPage dbpParent = bTreeManager.getNewDataPage(dbFile);

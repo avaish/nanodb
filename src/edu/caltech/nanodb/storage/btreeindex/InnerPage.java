@@ -491,19 +491,39 @@ public class InnerPage {
                     "non-empty sibling if no parent-key is specified!");
             }
         }
-
-        /* TODO:  IMPLEMENT THE REST OF THIS METHOD.
-         *
-         * You can use PageTuple.storeTuple() to write a key into a DBPage.
-         *
-         * The DBPage.write() method is useful for copying a large chunk of
-         * data from one DBPage to another.
-         *
-         * Your implementation also needs to properly handle the incoming
-         * parent-key, and produce a new parent-key as well.
-         */
-        logger.error("NOT YET IMPLEMENTED:  movePointersLeft()");
-
+        
+        TupleLiteral retValue = null;
+        int leftEndOffset = leftSibling.endOffset;
+        
+        if (parentKey != null) {
+        	PageTuple.storeTuple(leftSibling.dbPage, leftEndOffset, 
+        		((BTreeIndexPageTuple) parentKey).getColumnInfos(), parentKey);
+        	leftEndOffset += ((BTreeIndexPageTuple) parentKey).getSize();
+        }
+        
+        int len = getKey(count - 1).getOffset() - OFFSET_FIRST_POINTER;
+        
+        leftSibling.dbPage.write(leftEndOffset, dbPage.getPageData(), 
+        	OFFSET_FIRST_POINTER, len);
+        
+        leftSibling.dbPage.writeShort(OFFSET_NUM_POINTERS, 
+        	leftSibling.numPointers + count);
+        
+        retValue = new TupleLiteral(getKey(count - 1));
+        
+        int moveOffset = getKey(count).getOffset() - 2;
+        int moveLen = endOffset - moveOffset;
+        
+        dbPage.moveDataRange(moveOffset, OFFSET_FIRST_POINTER, moveLen);
+        
+        dbPage.writeShort(OFFSET_NUM_POINTERS, numPointers - count);
+        
+        if (BTreeIndexManager.CLEAR_OLD_DATA) {
+        	int delOffset = getKey(getNumKeys() - count).getOffset();
+        	int delLen = endOffset - delOffset;
+            dbPage.setDataRange(delOffset, delLen, (byte) 0);
+        }
+        
         // Update the cached info for both non-leaf pages.
         loadPageContents();
         leftSibling.loadPageContents();
@@ -517,7 +537,7 @@ public class InnerPage {
                 leftSibling.toFormattedString());
         }
 
-        return null;
+        return retValue;
     }
 
 
@@ -574,18 +594,39 @@ public class InnerPage {
                     "non-empty sibling if no parent-key is specified!");
             }
         }
-
-        /* TODO:  IMPLEMENT THE REST OF THIS METHOD.
-         *
-         * You can use PageTuple.storeTuple() to write a key into a DBPage.
-         *
-         * The DBPage.write() method is useful for copying a large chunk of
-         * data from one DBPage to another.
-         *
-         * Your implementation also needs to properly handle the incoming
-         * parent-key, and produce a new parent-key as well.
-         */
-        logger.error("NOT YET IMPLEMENTED:  movePointersRight()");
+        
+        TupleLiteral retValue = null;
+        
+        if (parentKey != null) {
+        	int moveLen = endOffset - getKey(getNumKeys() - count).getOffset();
+        	rightSibling.dbPage.moveDataRange(OFFSET_FIRST_POINTER, 
+        		OFFSET_FIRST_POINTER + moveLen, rightSibling.endOffset - 
+        		OFFSET_FIRST_POINTER);
+        }
+        
+        int startOffset = getKey(getNumKeys() - count + 1).getOffset() - 2;
+    	int len = endOffset - startOffset;
+    	
+    	rightSibling.dbPage.write(OFFSET_FIRST_POINTER, dbPage.getPageData(), 
+        	startOffset, len);
+        
+    	if (parentKey != null) {
+    		PageTuple.storeTuple(rightSibling.dbPage, OFFSET_FIRST_POINTER + len, 
+            	((BTreeIndexPageTuple) parentKey).getColumnInfos(), parentKey);
+    	}
+    	
+    	rightSibling.dbPage.writeShort(OFFSET_NUM_POINTERS, 
+        	rightSibling.numPointers + count);
+        
+        dbPage.writeShort(OFFSET_NUM_POINTERS, numPointers - count);
+        
+        retValue = new TupleLiteral(getKey(getNumKeys() - count));
+        	
+        if (BTreeIndexManager.CLEAR_OLD_DATA) {
+        	int delOffset = getKey(getNumKeys() - count).getOffset();
+        	int delLen = endOffset - delOffset;
+            dbPage.setDataRange(delOffset, delLen, (byte) 0);
+        }
 
         // Update the cached info for both non-leaf pages.
         loadPageContents();
@@ -600,7 +641,7 @@ public class InnerPage {
                 rightSibling.toFormattedString());
         }
 
-        return null;
+        return retValue;
     }
 
 

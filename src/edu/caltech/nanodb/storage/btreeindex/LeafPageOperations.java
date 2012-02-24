@@ -381,9 +381,11 @@ public class LeafPageOperations {
         DBPage newDBPage = bTreeManager.getNewDataPage(dbFile);
         LeafPage newLeaf = LeafPage.init(newDBPage, idxFileInfo);
         
+        // Update pointers on both leaves.
         newLeaf.setNextPageNo(leaf.getNextPageNo());
         leaf.setNextPageNo(newLeaf.getPageNo());
         
+        // Move entries and insert.
         leaf.moveEntriesRight(newLeaf, leaf.getNumEntries() / 2);
         addEntryToLeafPair(leaf, newLeaf, key);
         
@@ -392,6 +394,7 @@ public class LeafPageOperations {
             parentPageNo = pagePath.get(pathSize - 2);
         
         if (parentPageNo != -1) {
+        	// Update parent inner page.
         	InnerPageOperations ops = new InnerPageOperations(bTreeManager);
         	ops.addEntry(new InnerPage(storageManager.loadDBPage(dbFile, 
             	parentPageNo), idxFileInfo), pagePath.subList(0, pathSize - 1), 

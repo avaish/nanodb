@@ -495,32 +495,39 @@ public class InnerPage {
         TupleLiteral retValue = null;
         int leftEndOffset = leftSibling.endOffset;
         
+        // If there is a parent key, insert it at the end of the left sibling
         if (parentKey != null) {
-        	PageTuple.storeTuple(leftSibling.dbPage, leftEndOffset, 
-        		((BTreeIndexPageTuple) parentKey).getColumnInfos(), parentKey);
-        	leftEndOffset += ((BTreeIndexPageTuple) parentKey).getSize();
+            PageTuple.storeTuple(leftSibling.dbPage, leftEndOffset, 
+                ((BTreeIndexPageTuple) parentKey).getColumnInfos(), parentKey);
+            leftEndOffset += ((BTreeIndexPageTuple) parentKey).getSize();
         }
         
         int len = getKey(count - 1).getOffset() - OFFSET_FIRST_POINTER;
         
+        // Write the nodes to be shifted over on the left sibling.
         leftSibling.dbPage.write(leftEndOffset, dbPage.getPageData(), 
-        	OFFSET_FIRST_POINTER, len);
+            OFFSET_FIRST_POINTER, len);
         
+        // Update pointer count for the left sibling.
         leftSibling.dbPage.writeShort(OFFSET_NUM_POINTERS, 
-        	leftSibling.numPointers + count);
+            leftSibling.numPointers + count);
         
+        // New parent key!
         retValue = new TupleLiteral(getKey(count - 1));
         
         int moveOffset = getKey(count).getOffset() - 2;
         int moveLen = endOffset - moveOffset;
         
+        // Move up the rest of the current inner node.
         dbPage.moveDataRange(moveOffset, OFFSET_FIRST_POINTER, moveLen);
         
+        // Update pointer count of the current inner node.
         dbPage.writeShort(OFFSET_NUM_POINTERS, numPointers - count);
         
+        // Clean up old data.
         if (BTreeIndexManager.CLEAR_OLD_DATA) {
-        	int delOffset = getKey(getNumKeys() - count).getOffset();
-        	int delLen = endOffset - delOffset;
+            int delOffset = getKey(getNumKeys() - count).getOffset();
+            int delLen = endOffset - delOffset;
             dbPage.setDataRange(delOffset, delLen, (byte) 0);
         }
         
@@ -596,35 +603,51 @@ public class InnerPage {
         }
         
         TupleLiteral retValue = null;
-        
         if (parentKey != null) {
-        	int moveLen = endOffset - getKey(getNumKeys() - count).getOffset();
-        	rightSibling.dbPage.moveDataRange(OFFSET_FIRST_POINTER, 
-        		OFFSET_FIRST_POINTER + moveLen, rightSibling.endOffset - 
-        		OFFSET_FIRST_POINTER);
+            retValue = new TupleLiteral(parentKey);
+        }
+        // Defense for 0.
+        if (count == 0)
+            return null;
+        
+        // If there is a parent key, sibling node is not empty. Shift the data
+        // over to make space.
+        if (parentKey != null) {
+            int moveLen = endOffset - getKey(getNumKeys() - count).getOffset();
+            rightSibling.dbPage.moveDataRange(OFFSET_FIRST_POINTER, 
+                OFFSET_FIRST_POINTER + moveLen, rightSibling.endOffset - 
+                OFFSET_FIRST_POINTER);
         }
         
-        int startOffset = getKey(getNumKeys() - count + 1).getOffset() - 2;
-    	int len = endOffset - startOffset;
-    	
-    	rightSibling.dbPage.write(OFFSET_FIRST_POINTER, dbPage.getPageData(), 
-        	startOffset, len);
+        int len = 0;
+        // Defense for 1 (only the parent node really changes here).
+        if (count != 1) {
+            int startOffset = getKey(getNumKeys() - count + 1).getOffset() - 2;
+            len = endOffset - startOffset;
+            
+            // Write the data to be shifter on the right sibling.
+            rightSibling.dbPage.write(OFFSET_FIRST_POINTER, dbPage.getPageData(), 
+                startOffset, len);
+        }
         
-    	if (parentKey != null) {
-    		PageTuple.storeTuple(rightSibling.dbPage, OFFSET_FIRST_POINTER + len, 
-            	((BTreeIndexPageTuple) parentKey).getColumnInfos(), parentKey);
-    	}
-    	
-    	rightSibling.dbPage.writeShort(OFFSET_NUM_POINTERS, 
-        	rightSibling.numPointers + count);
+        // Write the old parent key data into the sibling.
+        if (parentKey != null) {
+            PageTuple.storeTuple(rightSibling.dbPage, OFFSET_FIRST_POINTER + len, 
+                ((BTreeIndexPageTuple) parentKey).getColumnInfos(), parentKey);
+        }
+        
+        rightSibling.dbPage.writeShort(OFFSET_NUM_POINTERS, 
+            rightSibling.numPointers + count);
         
         dbPage.writeShort(OFFSET_NUM_POINTERS, numPointers - count);
         
+        // New parent key
         retValue = new TupleLiteral(getKey(getNumKeys() - count));
-        	
+            
+        // Clean up old data.
         if (BTreeIndexManager.CLEAR_OLD_DATA) {
-        	int delOffset = getKey(getNumKeys() - count).getOffset();
-        	int delLen = endOffset - delOffset;
+            int delOffset = getKey(getNumKeys() - count).getOffset();
+            int delLen = endOffset - delOffset;
             dbPage.setDataRange(delOffset, delLen, (byte) 0);
         }
 

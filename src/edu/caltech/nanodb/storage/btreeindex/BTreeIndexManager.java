@@ -324,42 +324,42 @@ public class BTreeIndexManager implements IndexManager {
 
         while (pageType != BTREE_LEAF_PAGE)
         {
-        	if (pagePath != null) {
-        		pagePath.add(dbPage.getPageNo());
-        	}
-        	
-        	InnerPage innerPage = new InnerPage(dbPage, idxFileInfo);
-        	int next_pointer = -1;
-        	
-        	for (int i = 0; i < innerPage.getNumKeys(); i++) {
-        		int compare = TupleComparator.comparePartialTuples(searchKey, 
-        			innerPage.getKey(i));
-        		
-        		if (compare == 0) {
-        			next_pointer = i + 1;
-        			break;
-        		}
-        		else if (compare < 0) {
-        			next_pointer = i;
-        			break;
-        		}
-        	}
-        	
-        	if (next_pointer == -1) {
-        		next_pointer = innerPage.getNumPointers() - 1;
-        	}
-        	
-        	dbPage = storageManager.loadDBPage(dbFile, 
-        		innerPage.getPointer(next_pointer));
-        	pageType = dbPage.readByte(0);
-        	if (pageType != BTREE_INNER_PAGE && pageType != BTREE_LEAF_PAGE)
+            if (pagePath != null) {
+                pagePath.add(dbPage.getPageNo());
+            }
+            
+            // Insert new leaf node into 'linked list'.
+            InnerPage innerPage = new InnerPage(dbPage, idxFileInfo);
+            int next_pointer = innerPage.getNumPointers() - 1;
+            
+            // Determine which pointer to follow.
+            for (int i = 0; i < innerPage.getNumKeys(); i++) {
+                int compare = TupleComparator.comparePartialTuples(searchKey, 
+                    innerPage.getKey(i));
+                
+                if (compare == 0) {
+                    next_pointer = i + 1;
+                    break;
+                }
+                else if (compare < 0) {
+                    next_pointer = i;
+                    break;
+                }
+            }
+            
+            // Load the next page.
+            dbPage = storageManager.loadDBPage(dbFile, 
+                innerPage.getPointer(next_pointer));
+            pageType = dbPage.readByte(0);
+            if (pageType != BTREE_INNER_PAGE && pageType != BTREE_LEAF_PAGE)
                 throw new IOException("Invalid page type encountered:  " + pageType);
         }
         
         if (pagePath != null) {
-    		pagePath.add(dbPage.getPageNo());
-    	}
+            pagePath.add(dbPage.getPageNo());
+        }
         
+        // Return the leaf page (first check if it's a leaf!)
         assert(pageType == BTREE_LEAF_PAGE);
         return new LeafPage(dbPage, idxFileInfo);
     }

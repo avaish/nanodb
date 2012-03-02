@@ -2,12 +2,13 @@ package edu.caltech.nanodb.storage;
 
 
 import java.io.UnsupportedEncodingException;
-
 import java.util.Arrays;
+
+import org.apache.log4j.Logger;
 
 import edu.caltech.nanodb.expressions.TypeConverter;
 import edu.caltech.nanodb.relations.ColumnType;
-import org.apache.log4j.Logger;
+import edu.caltech.nanodb.storage.writeahead.LogSequenceNumber;
 
 
 /**
@@ -51,8 +52,26 @@ public class DBPage {
     private int pageNo;
 
 
+    /**
+     * The pin-count of this page.  When nonzero, the page is not allowed to be
+     * flushed from the buffer manager since the page is being used by at least
+     * one session.
+     */
+    private int pinCount;
+
+
     /** This flag is true if this page has been modified in memory. */
     private boolean dirty;
+
+
+    /**
+     * For dirty pages, this field is set to the Log Sequence Number of the
+     * write-ahead log record corresponding to the most recent write to the
+     * page.  When the page is being flushed back to disk, the write-ahead log
+     * must be written to at least this point, or else the write-ahead logging
+     * rule will be violated.
+     */
+    private LogSequenceNumber pageLSN;
 
 
     /** The actual data for the table-page. */
@@ -90,7 +109,9 @@ public class DBPage {
 
         this.dbFile = dbFile;
         this.pageNo = pageNo;
+        pinCount = 0;
         dirty = false;
+        pageLSN = null;
 
         // Allocate the space for the page data.
         pageData = new byte[dbFile.getPageSize()];
@@ -140,6 +161,31 @@ public class DBPage {
         return pageData.length;
     }
 
+    
+    public void incPinCount() {
+        pinCount++;
+    }
+    
+    
+    public void decPinCount() {
+        if (pinCount <= 0) {
+            throw new IllegalStateException(
+                "pinCount is not positive (value is " + pinCount + ")");
+        }
+
+        pinCount--;
+    }
+    
+    
+    public int getPinCount() {
+        return pinCount;
+    }
+
+
+    public boolean isPinned() {
+        return (pinCount > 0);
+    }
+    
 
     /**
      * Returns the byte-array of the page's data.  <b>Note that if any changes
@@ -192,10 +238,38 @@ public class DBPage {
             // Page is being changed from dirty to clean.  Clear out the old
             // page data since we don't need it anymore.
             oldPageData = null;
+
+            // Clear out the page-LSN value as well.
+            pageLSN = null;
         }
         
         this.dirty = dirty;
     }
+
+
+    public LogSequenceNumber getPageLSN() {
+        return pageLSN;
+    }
+
+
+    public void setPageLSN(LogSequenceNumber lsn) {
+        pageLSN = lsn;
+    }
+
+
+    /**
+     * This method makes the {@code DBPage} invalid by clearing all of its
+     * internal references.  It is used by the Buffer Manager when a page is
+     * removed from the cache so that no other database code will continue to
+     * try to use the page.
+     */
+    public void invalidate() {
+        dbFile = null;
+        pageNo = -1;
+        pageData = null;
+        oldPageData = null;
+    }
+
 
     /*=============================*/
     /* TYPED DATA ACCESS FUNCTIONS */

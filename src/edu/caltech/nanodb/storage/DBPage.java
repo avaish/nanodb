@@ -212,6 +212,22 @@ public class DBPage {
 
 
     /**
+     * For a dirty page, this method copies the "new page data" into the "old
+     * page data" so that they are the same.  This is necessary when changes are
+     * recorded to the write-ahead log; since the changes are reflected in the
+     * WAL, it's not necessary to represent the deltas anymore.
+     * 
+     * @throws IllegalStateException if the page is not currently marked dirty
+     */
+    public void syncOldPageData() {
+        if (oldPageData == null)
+            throw new IllegalStateException("No old page data to sync");
+        
+        System.arraycopy(pageData, 0, oldPageData, 0, pageData.length);
+    }
+    
+
+    /**
      * Returns true if the page's data has been changed in memory; false
      * otherwise.
      *
@@ -1060,5 +1076,87 @@ public class DBPage {
         }
 
         return dataSize;
+    }
+
+
+    public String toFormattedString() {
+        StringBuilder buf = new StringBuilder();
+
+        int pageSize = dbFile.getPageSize();
+        buf.append(String.format("DBPage[file=%s, pageNo=%d, pageSize=%d",
+            dbFile, pageNo, pageSize));
+
+        buf.append("\npageData =");
+        for (int i = 0; i < pageSize; i++) {
+            if (i % 32 == 0)
+                buf.append("\n                ");
+
+            buf.append(String.format(" %02X", pageData[i]));
+        }
+
+        buf.append("\noldPageData =");
+        for (int i = 0; i < pageSize; i++) {
+            if (i % 32 == 0)
+                buf.append("\n                ");
+
+            buf.append(String.format(" %02x", oldPageData[i]));
+        }
+
+        buf.append("\n]");
+
+        return buf.toString();
+    }
+
+
+    /**
+     * This helper method returns a formatted string describing all changes
+     * made to the page's contents; that is, the differences between the
+     * {@link #pageData} and the {@link #oldPageData} byte-arrays.  The output
+     * is formatted to inclue rows of 32 bytes, and only includes rows where
+     * the data between old and new pages are actually different.
+     *
+     * @return a formatted string describing all changes made to the page's
+     *         contents
+     *
+     * @throws IllegalStateException if the method is called on a non-dirty
+     *         page
+     */
+    public String getChangesAsString() {
+        if (!dirty)
+            throw new IllegalStateException("Page is not dirty");
+        
+        StringBuilder buf = new StringBuilder();
+        
+        int i = 0;
+        int pageSize = dbFile.getPageSize();
+        while (i < pageSize) {
+            boolean same = true;
+            for (int j = 0; j < 32; j++) {
+                if (oldPageData[i + j] != pageData[i + j]) {
+                    same = false;
+                    break;
+                }
+            }
+
+            if (!same) {
+                buf.append(String.format("0x%04X OLD: ", i));
+                for (int j = 0; j < 32; j++)
+                    buf.append(String.format(" %02X", oldPageData[i + j]));
+                buf.append('\n');
+
+                buf.append(String.format("0x%04X NEW: ", i));
+                for (int j = 0; j < 32; j++) {
+                    if (pageData[i + j] != oldPageData[i + j])
+                        buf.append(String.format(" %02X", pageData[i + j]));
+                    else
+                        buf.append(" ..");
+                }
+                buf.append('\n');
+            }
+
+            i += 32;
+        }
+        
+        return buf.toString();
     }
 }

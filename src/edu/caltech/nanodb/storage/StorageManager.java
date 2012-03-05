@@ -450,12 +450,30 @@ public class StorageManager {
     }
 
 
-    public void releaseDBPage(DBPage dbPage) throws IOException {
+    /**
+     * This method causes any changes to the specified page to be logged by
+     * the transaction manager's write-ahead log, so that the changes can be
+     * redone or undone as may be appropriate.  Once the page's changes have
+     * been logged, the {@link DBPage#syncOldPageData} method is called on
+     * the page, since the page's changes have been recorded in the WAL.
+     *
+     * @param dbPage the page to record changes for
+     */
+    public void logDBPageWrite(DBPage dbPage) throws IOException {
         // If the page is dirty, record its changes to the write-ahead log.
         if (transactionManager != null)
             transactionManager.recordPageUpdate(dbPage);
+    }
+    
 
-        // Finally, unpin the page so that it may be evicted.
+    /**
+     * This method causes the current session's pin for the specified page to
+     * be removed, so that the page can be evicted from the buffer manager.
+     *
+     * @param dbPage the page to remove the session's pin for
+     */
+    public void unpinDBPage(DBPage dbPage) {
+        // Unpin the page so that it may be evicted.
         bufferManager.unpinPage(dbPage);
     }
 

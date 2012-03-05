@@ -44,7 +44,7 @@ public class LogSequenceNumber
 
         this.logFileNo = logFileNo;
         this.fileOffset = fileOffset;
-        recordSize = -1;
+        recordSize = 0;
     }
     
     

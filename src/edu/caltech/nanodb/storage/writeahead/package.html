@@ -62,6 +62,10 @@ six bytes, and "<em>S<sub>si</sub></em> B" means <em>S<sub>si</sub></em> bytes.
             <tr><td>4B</td><td>Transaction ID</td></tr>
             <tr><td>6B</td><td>PrevLSN</td></tr>
 
+            <tr><td>1-256B</td><td>Filename of the modified file, written as a {@code VARCHAR(255)}.
+                This value can be read with a function like {@link edu.caltech.nanodb.storage.DBFileReader#readVarString255}.</td></tr>
+            <tr><td>2B</td><td>Page number of modified page, written as an unsigned short</td></tr>
+
             <tr><td valign="top">?B</td>
                <td>Description of the old page <i>P</i>, and the new page <i>P'</i>.
                    The differences are stored as a series of <em>segments</em>, where
@@ -98,6 +102,10 @@ six bytes, and "<em>S<sub>si</sub></em> B" means <em>S<sub>si</sub></em> bytes.
             <tr><td>1B</td><td>{@link edu.caltech.nanodb.storage.writeahead.WALRecordType#UPDATE_PAGE_REDO_ONLY}</td></tr>
             <tr><td>4B</td><td>Transaction ID</td></tr>
             <tr><td>6B</td><td>PrevLSN</td></tr>
+
+            <tr><td>1-256B</td><td>Filename of the modified file, written as a {@code VARCHAR(255)}.
+                This value can be read with a function like {@link edu.caltech.nanodb.storage.DBFileReader#readVarString255}.</td></tr>
+            <tr><td>2B</td><td>Page number of modified page, written as an unsigned short</td></tr>
 
             <tr><td valign="top">?B</td>
                <td>Description of the new page <i>P'</i>.  

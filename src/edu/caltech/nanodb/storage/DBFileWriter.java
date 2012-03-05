@@ -16,6 +16,7 @@ public class DBFileWriter extends DBFileReader {
 
     public DBFileWriter(DBFile dbFile) {
         super(dbFile);
+        extendFile = true;
     }
 
 

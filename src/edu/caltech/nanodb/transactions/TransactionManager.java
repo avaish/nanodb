@@ -269,6 +269,7 @@ public class TransactionManager {
         }
 
         walManager.writeUpdatePageRecord(dbPage);
+        dbPage.syncOldPageData();
     }
 
 

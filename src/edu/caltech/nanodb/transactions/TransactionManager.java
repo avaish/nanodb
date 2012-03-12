@@ -363,7 +363,32 @@ public class TransactionManager {
      *         going to be broken.
      */
     public void forceWAL(LogSequenceNumber lsn) throws IOException {
-        // TODO:  IMPLEMENT
+        if (lsn.compareTo(txnStateNextLSN) <= 0)
+        	return;
+        
+        logger.debug("Forcing WAL up to " + lsn);
+        
+        DBFile walFile;
+        for (int x = txnStateNextLSN.getLogFileNo(); x < lsn.getLogFileNo(); x++) {
+        	walFile = bufferManager.getFile(WALManager.getWALFileName(x));
+        	if (walFile != null) {
+        		bufferManager.writeDBFile(walFile, true);
+        		logger.debug("Synced " + walFile);
+        	}
+        }
+        
+        walFile = bufferManager.getFile(WALManager.getWALFileName(lsn.getLogFileNo()));
+        int endRecordOffset = lsn.getFileOffset() + lsn.getRecordSize();
+        bufferManager.writeDBFile(walFile, 0, 
+        	endRecordOffset / walFile.getPageSize(), true);
+		logger.debug("Synced " + walFile + " from pages 0 to" + 
+        	endRecordOffset / walFile.getPageSize());
+        
+        txnStateNextLSN = lsn;
+        
+        storeTxnStateToFile();
+        
+        logger.debug("Updated nextLSN on disk to " + txnStateNextLSN);
     }
 
 

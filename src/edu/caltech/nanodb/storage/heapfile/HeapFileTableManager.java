@@ -195,6 +195,9 @@ public class HeapFileTableManager implements TableManager {
         
         // Write pointer to next free page (at table initialization, is set to 1)
         DataPage.setPointer(headerPage, 1);
+        
+        storageManager.logDBPageWrite(headerPage);
+        storageManager.unpinDBPage(headerPage);
     }
 
 
@@ -387,6 +390,8 @@ public class HeapFileTableManager implements TableManager {
         // Read in the table's statistics.
         tblFileInfo.setStats(HeaderPage.getTableStats(headerPage, tblFileInfo));
         logger.debug(tblFileInfo.getStats());
+        
+        storageManager.unpinDBPage(headerPage);
     }
 
 
@@ -514,8 +519,10 @@ public class HeapFileTableManager implements TableManager {
                     // Get the offset of the tuple in the page.  If it's 0 then
                     // the slot is empty, and we skip to the next slot.
                     int offset = DataPage.getSlotValue(dbPage, iSlot);
-                    if (offset == DataPage.EMPTY_SLOT)
+                    if (offset == DataPage.EMPTY_SLOT) {
+                    	storageManager.unpinDBPage(dbPage);
                         continue;
+                    }
 
                     // This is the first tuple in the file.  Build up the
                     // HeapFilePageTuple object and return it.
@@ -628,7 +635,10 @@ public class HeapFileTableManager implements TableManager {
             // tuple in that page.
 
             try {
-                dbPage = storageManager.loadDBPage(dbFile, dbPage.getPageNo() + 1);
+                DBPage nextDBPage = storageManager.loadDBPage(dbFile, 
+                	dbPage.getPageNo() + 1);
+                storageManager.unpinDBPage(dbPage);
+                dbPage = nextDBPage;
                 nextSlot = 0;
             }
             catch (EOFException e) {
@@ -726,6 +736,7 @@ public class HeapFileTableManager implements TableManager {
 
             // If we reached this point then the page doesn't have enough
             // space, so go on to the next data page.
+            storageManager.unpinDBPage(prev);
             prev = dbPage;
             dbPage = null;
             pageNo = DataPage.getPointer(prev);
@@ -750,6 +761,7 @@ public class HeapFileTableManager implements TableManager {
             dbPage, slot, tupOffset, tup);
 
         DataPage.sanityCheck(dbPage);
+        storageManager.logDBPageWrite(dbPage);
         
         // Check to see whether the modified page is filled, and remove it from
         // the linked list of free pages if it is.
@@ -760,7 +772,10 @@ public class HeapFileTableManager implements TableManager {
             DataPage.setPointer(prev, DataPage.getPointer(dbPage));
             logger.debug("Free space " + free + " is less than " + necessary);
             logger.debug("Page has been filled.");
+            storageManager.logDBPageWrite(prev);
         }
+
+        storageManager.unpinDBPage(prev);
 
         return pageTup;
     }
@@ -795,6 +810,9 @@ public class HeapFileTableManager implements TableManager {
         }
 
         DataPage.sanityCheck(ptup.getDBPage());
+        
+        storageManager.logDBPageWrite(ptup.getDBPage());
+        storageManager.unpinDBPage(ptup.getDBPage());
     }
 
 
@@ -832,7 +850,12 @@ public class HeapFileTableManager implements TableManager {
             DataPage.setPointer(headerPage, dbPage.getPageNo());
             logger.debug("Free space " + free + " is more than " + necessary);
             logger.debug("Page has been reclaimed.");
+            storageManager.logDBPageWrite(headerPage);
         }
+        
+        storageManager.logDBPageWrite(dbPage);
+        storageManager.unpinDBPage(headerPage);
+        storageManager.unpinDBPage(dbPage);
     }
 
 
@@ -895,7 +918,9 @@ public class HeapFileTableManager implements TableManager {
                     nextTuple);
             }
             
-            nextBlock = reader.getNextDataPage(tblFileInfo, nextBlock);
+            DBPage newBlock = reader.getNextDataPage(tblFileInfo, nextBlock);
+            storageManager.unpinDBPage(nextBlock);
+            nextBlock = newBlock;
         }
         
         // clean up all the stats for insertion.
@@ -916,6 +941,9 @@ public class HeapFileTableManager implements TableManager {
         
         tblFileInfo.setStats(stats);
         HeaderPage.setTableStats(headerPage, tblFileInfo);
+        
+        storageManager.logDBPageWrite(headerPage);
+        storageManager.unpinDBPage(headerPage);
     }
 
 

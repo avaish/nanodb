@@ -4,20 +4,22 @@ package edu.caltech.nanodb.storage;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 
-import edu.caltech.nanodb.server.EventDispatcher;
 import org.apache.log4j.Logger;
 
 import edu.caltech.nanodb.indexes.IndexFileInfo;
 import edu.caltech.nanodb.indexes.IndexManager;
-
 import edu.caltech.nanodb.relations.TableConstraintType;
-
+import edu.caltech.nanodb.relations.TableSchema;
+import edu.caltech.nanodb.server.EventDispatcher;
 import edu.caltech.nanodb.storage.btreeindex.BTreeIndexManager;
 import edu.caltech.nanodb.storage.heapfile.HeapFileTableManager;
+import edu.caltech.nanodb.transactions.TransactionManager;
 
 
 /**
+ *
  *
  * @todo This class requires synchronization, once we support multiple clients.
  */
@@ -162,10 +164,22 @@ public class StorageManager {
     private File baseDir;
 
 
+    /** The buffer manager stores data pages in memory, to avoid disk IOs. */
     private BufferManager bufferManager;
 
 
+    /**
+     * The file manager performs basic operations against the filesystem,
+     * without performing any buffering whatsoever.
+     */
     private FileManager fileManager;
+
+
+    /**
+     * If transactions are enabled, this will be the singleton transaction
+     * manager instance; otherwise, it will be {@code null}.
+     */
+    private TransactionManager transactionManager;
 
 
     /**
@@ -229,14 +243,15 @@ public class StorageManager {
     }
 
 
-    private void finishInit() {
-        initFileTypeManagers();
-    }
+    public void finishInit() throws IOException {
+        if (TransactionManager.isEnabled()) {
+            logger.info("Initializing transaction manager.");
+            transactionManager = new TransactionManager(this, bufferManager);
 
-
-    private void initFileTypeManagers() {
-        // fileTypeManagers.put(DBFileType.WRITE_AHEAD_LOG_FILE,
-        //     new WALManager(this));
+            // This method opens the transaction-state file, performs any
+            // necessary recovery operations, and so forth.
+            transactionManager.initialize();
+        }
 
         fileTypeManagers.put(DBFileType.HEAP_DATA_FILE,
             new HeapFileTableManager(this));
@@ -246,9 +261,17 @@ public class StorageManager {
     }
 
 
+    public void addFileTypeManager(DBFileType type, Object manager) {
+        fileTypeManagers.put(type, manager);
+    }
+
+
     private void shutdownStorage() throws IOException {
-        // TODO
-        closeAllOpenTables();
+        transactionManager.forceWAL();
+
+        List<DBFile> dbFiles = bufferManager.removeAll();
+        for (DBFile dbFile : dbFiles)
+            fileManager.closeDBFile(dbFile);
     }
 
 
@@ -259,6 +282,28 @@ public class StorageManager {
      */
     public File getBaseDir() {
         return baseDir;
+    }
+
+
+    public TransactionManager getTransactionManager() {
+        return transactionManager;
+    }
+
+    
+    public DBFile createDBFile(String filename, DBFileType type)
+        throws IOException {
+
+        if (bufferManager.getFile(filename) != null) {
+            throw new IllegalStateException("A file " + filename +
+                " is already cached in the Buffer Manager!  Does it already exist?");
+        }
+
+        DBFile dbFile = fileManager.createDBFile(filename, type,
+            getCurrentPageSize());
+
+        bufferManager.addFile(dbFile);
+
+        return dbFile;
     }
 
 
@@ -405,6 +450,34 @@ public class StorageManager {
     }
 
 
+    /**
+     * This method causes any changes to the specified page to be logged by
+     * the transaction manager's write-ahead log, so that the changes can be
+     * redone or undone as may be appropriate.  Once the page's changes have
+     * been logged, the {@link DBPage#syncOldPageData} method is called on
+     * the page, since the page's changes have been recorded in the WAL.
+     *
+     * @param dbPage the page to record changes for
+     */
+    public void logDBPageWrite(DBPage dbPage) throws IOException {
+        // If the page is dirty, record its changes to the write-ahead log.
+        if (transactionManager != null)
+            transactionManager.recordPageUpdate(dbPage);
+    }
+    
+
+    /**
+     * This method causes the current session's pin for the specified page to
+     * be removed, so that the page can be evicted from the buffer manager.
+     *
+     * @param dbPage the page to remove the session's pin for
+     */
+    public void unpinDBPage(DBPage dbPage) {
+        // Unpin the page so that it may be evicted.
+        bufferManager.unpinPage(dbPage);
+    }
+
+
     /*========================================================================
      * CODE RELATED TO TABLE FILES
      */
@@ -542,31 +615,6 @@ public class StorageManager {
 
 
     /**
-     * This method closes all table files that are currently open, possibly
-     * flushing any dirty pages to disk in the process.
-     *
-     * @throws IOException if an IO error occurs while attempting to close
-     *         tables.  This could occur, for example, if dirty pages are being
-     *         flushed to disk and a write error occurs.
-     */
-    public void closeAllOpenTables() throws IOException {
-        // Flush all open database pages in the buffer manager.
-        bufferManager.flushAll();
-
-        for (TableFileInfo tblFileInfo : openTables.values()) {
-            // Let the table manager do any final cleanup necessary before
-            // closing the table.
-            DBFile dbFile = tblFileInfo.getDBFile();
-            DBFileType type = dbFile.getType();
-            getTableManager(type).beforeCloseTable(tblFileInfo);
-            closeDBFile(dbFile);
-        }
-
-        openTables.clear();
-    }
-
-
-    /**
      * Drops the specified table from the database.
      *
      * @param tableName the name of the table to drop
@@ -575,12 +623,30 @@ public class StorageManager {
      *         table's backing storage.
      */
     public void dropTable(String tableName) throws IOException {
-        // TODO:  Purge all pages for this table out of the cache.  No point in saving them, of course.
+        // As odd as it might seem, we need to open the table so that we can
+        // drop all related objects, such as indexes on the table, etc.
+        TableFileInfo tblFileInfo = openTable(tableName);
+        
+        TableSchema schema = tblFileInfo.getSchema();
+        for (String indexName : schema.getIndexes().keySet())
+            dropIndex(tblFileInfo, indexName);
+
+        // Close the table.  This will purge out all dirty pages for the table
+        // as well.
+        closeTable(tblFileInfo);
 
         String tblFileName = getTableFileName(tableName);
         fileManager.deleteDBFile(tblFileName);
     }
 
+    
+    public void dropIndex(TableFileInfo tblFileInfo, String indexName)
+        throws IOException {
+
+
+    }
+    
+    
 
     /*========================================================================
      * CODE RELATED TO INDEX FILES
@@ -667,6 +733,7 @@ public class StorageManager {
                 indexName = String.format(pattern, i);
                 indexFilename = getIndexFileName(indexName);
                 f = new File(baseDir, indexFilename);
+                i++;
             }
             while (!f.createNewFile());
         }

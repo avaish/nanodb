@@ -328,6 +328,11 @@ public class FileManager {
      * @throws IOException if the file cannot be closed for some reason.
      */
     public void closeDBFile(DBFile dbFile) throws IOException {
+        // Sync the file before closing, so that we can have some confidence
+        // that any modified data has reached the disk.
+        syncDBFile(dbFile);
+
+        logger.info("Closing database file:  " + dbFile);
         dbFile.getFileContents().close();
     }
 

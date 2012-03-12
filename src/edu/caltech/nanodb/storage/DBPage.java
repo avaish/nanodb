@@ -2,12 +2,13 @@ package edu.caltech.nanodb.storage;
 
 
 import java.io.UnsupportedEncodingException;
-
 import java.util.Arrays;
+
+import org.apache.log4j.Logger;
 
 import edu.caltech.nanodb.expressions.TypeConverter;
 import edu.caltech.nanodb.relations.ColumnType;
-import org.apache.log4j.Logger;
+import edu.caltech.nanodb.storage.writeahead.LogSequenceNumber;
 
 
 /**
@@ -51,8 +52,26 @@ public class DBPage {
     private int pageNo;
 
 
+    /**
+     * The pin-count of this page.  When nonzero, the page is not allowed to be
+     * flushed from the buffer manager since the page is being used by at least
+     * one session.
+     */
+    private int pinCount;
+
+
     /** This flag is true if this page has been modified in memory. */
     private boolean dirty;
+
+
+    /**
+     * For dirty pages, this field is set to the Log Sequence Number of the
+     * write-ahead log record corresponding to the most recent write to the
+     * page.  When the page is being flushed back to disk, the write-ahead log
+     * must be written to at least this point, or else the write-ahead logging
+     * rule will be violated.
+     */
+    private LogSequenceNumber pageLSN;
 
 
     /** The actual data for the table-page. */
@@ -90,7 +109,9 @@ public class DBPage {
 
         this.dbFile = dbFile;
         this.pageNo = pageNo;
+        pinCount = 0;
         dirty = false;
+        pageLSN = null;
 
         // Allocate the space for the page data.
         pageData = new byte[dbFile.getPageSize()];
@@ -140,6 +161,31 @@ public class DBPage {
         return pageData.length;
     }
 
+    
+    public void incPinCount() {
+        pinCount++;
+    }
+    
+    
+    public void decPinCount() {
+        if (pinCount <= 0) {
+            throw new IllegalStateException(
+                "pinCount is not positive (value is " + pinCount + ")");
+        }
+
+        pinCount--;
+    }
+    
+    
+    public int getPinCount() {
+        return pinCount;
+    }
+
+
+    public boolean isPinned() {
+        return (pinCount > 0);
+    }
+    
 
     /**
      * Returns the byte-array of the page's data.  <b>Note that if any changes
@@ -164,6 +210,22 @@ public class DBPage {
         return oldPageData;
     }
 
+
+    /**
+     * For a dirty page, this method copies the "new page data" into the "old
+     * page data" so that they are the same.  This is necessary when changes are
+     * recorded to the write-ahead log; since the changes are reflected in the
+     * WAL, it's not necessary to represent the deltas anymore.
+     * 
+     * @throws IllegalStateException if the page is not currently marked dirty
+     */
+    public void syncOldPageData() {
+        if (oldPageData == null)
+            throw new IllegalStateException("No old page data to sync");
+        
+        System.arraycopy(pageData, 0, oldPageData, 0, pageData.length);
+    }
+    
 
     /**
      * Returns true if the page's data has been changed in memory; false
@@ -192,10 +254,38 @@ public class DBPage {
             // Page is being changed from dirty to clean.  Clear out the old
             // page data since we don't need it anymore.
             oldPageData = null;
+
+            // Clear out the page-LSN value as well.
+            pageLSN = null;
         }
         
         this.dirty = dirty;
     }
+
+
+    public LogSequenceNumber getPageLSN() {
+        return pageLSN;
+    }
+
+
+    public void setPageLSN(LogSequenceNumber lsn) {
+        pageLSN = lsn;
+    }
+
+
+    /**
+     * This method makes the {@code DBPage} invalid by clearing all of its
+     * internal references.  It is used by the Buffer Manager when a page is
+     * removed from the cache so that no other database code will continue to
+     * try to use the page.
+     */
+    public void invalidate() {
+        dbFile = null;
+        pageNo = -1;
+        pageData = null;
+        oldPageData = null;
+    }
+
 
     /*=============================*/
     /* TYPED DATA ACCESS FUNCTIONS */
@@ -986,5 +1076,87 @@ public class DBPage {
         }
 
         return dataSize;
+    }
+
+
+    public String toFormattedString() {
+        StringBuilder buf = new StringBuilder();
+
+        int pageSize = dbFile.getPageSize();
+        buf.append(String.format("DBPage[file=%s, pageNo=%d, pageSize=%d",
+            dbFile, pageNo, pageSize));
+
+        buf.append("\npageData =");
+        for (int i = 0; i < pageSize; i++) {
+            if (i % 32 == 0)
+                buf.append("\n                ");
+
+            buf.append(String.format(" %02X", pageData[i]));
+        }
+
+        buf.append("\noldPageData =");
+        for (int i = 0; i < pageSize; i++) {
+            if (i % 32 == 0)
+                buf.append("\n                ");
+
+            buf.append(String.format(" %02x", oldPageData[i]));
+        }
+
+        buf.append("\n]");
+
+        return buf.toString();
+    }
+
+
+    /**
+     * This helper method returns a formatted string describing all changes
+     * made to the page's contents; that is, the differences between the
+     * {@link #pageData} and the {@link #oldPageData} byte-arrays.  The output
+     * is formatted to inclue rows of 32 bytes, and only includes rows where
+     * the data between old and new pages are actually different.
+     *
+     * @return a formatted string describing all changes made to the page's
+     *         contents
+     *
+     * @throws IllegalStateException if the method is called on a non-dirty
+     *         page
+     */
+    public String getChangesAsString() {
+        if (!dirty)
+            throw new IllegalStateException("Page is not dirty");
+        
+        StringBuilder buf = new StringBuilder();
+        
+        int i = 0;
+        int pageSize = dbFile.getPageSize();
+        while (i < pageSize) {
+            boolean same = true;
+            for (int j = 0; j < 32; j++) {
+                if (oldPageData[i + j] != pageData[i + j]) {
+                    same = false;
+                    break;
+                }
+            }
+
+            if (!same) {
+                buf.append(String.format("0x%04X OLD: ", i));
+                for (int j = 0; j < 32; j++)
+                    buf.append(String.format(" %02X", oldPageData[i + j]));
+                buf.append('\n');
+
+                buf.append(String.format("0x%04X NEW: ", i));
+                for (int j = 0; j < 32; j++) {
+                    if (pageData[i + j] != oldPageData[i + j])
+                        buf.append(String.format(" %02X", pageData[i + j]));
+                    else
+                        buf.append(" ..");
+                }
+                buf.append('\n');
+            }
+
+            i += 32;
+        }
+        
+        return buf.toString();
     }
 }

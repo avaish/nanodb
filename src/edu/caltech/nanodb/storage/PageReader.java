@@ -33,6 +33,8 @@ public class PageReader {
     /**
      * Returns the current location in the page where the next operation will
      * start from.
+     *
+     * @return the current location in the page
      */
     public int getPosition() {
         return position;
@@ -41,6 +43,8 @@ public class PageReader {
 
     /**
      * Sets the location in the page where the next operation will start from.
+     *
+     * @param position the new location in the page
      */
     public void setPosition(int position) {
         if (position < 0 || position >= dbPage.getPageSize()) {
@@ -55,6 +59,8 @@ public class PageReader {
     /**
      * Move the current position by <tt>n</tt> bytes.  A negative value of
      * <tt>n</tt> will move the position backward.
+     *
+     * @param n the delta to apply to the current position
      */
     public void movePosition(int n) {
         if (position + n > dbPage.getPageSize())
@@ -69,6 +75,12 @@ public class PageReader {
     /**
      * Read a sequence of bytes into the provided byte-array, starting with the
      * specified offset, and reading the specified number of bytes.
+     *
+     * @param b the byte-array to read bytes into
+     *
+     * @param off the offset to read the bytes into the array
+     *
+     * @param len the number of bytes to read into the array
      */
     public void read(byte[] b, int off, int len) {
         dbPage.read(position, b, off, len);
@@ -79,6 +91,8 @@ public class PageReader {
     /**
      * Read a sequence of bytes into the provided byte-array.  The entire array
      * is filled from start to end.
+     *
+     * @param b the byte-array to read bytes into
      */
     public void read(byte[] b) {
         read(b, 0, b.length);
@@ -131,85 +145,85 @@ public class PageReader {
     }
 
 
-  /** Reads and returns a two-byte char value from the current position. **/
-  public char readChar() {
-    char value = dbPage.readChar(position);
-    position += 2;
+    /** Reads and returns a two-byte char value from the current position. */
+    public char readChar() {
+        char value = dbPage.readChar(position);
+        position += 2;
 
-    return value;
-  }
-
-
-  /**
-   * Reads and returns a four-byte unsigned integer value from the current
-   * position.
-   **/
-  public long readUnsignedInt() {
-    long value = dbPage.readUnsignedInt(position);
-    position += 4;
-
-    return value;
-  }
+        return value;
+    }
 
 
-  /** Reads and returns a four-byte integer value from the current position. **/
-  public int readInt() {
-    int value = dbPage.readInt(position);
-    position += 4;
+    /**
+     * Reads and returns a four-byte unsigned integer value from the current
+     * position.
+     */
+    public long readUnsignedInt() {
+        long value = dbPage.readUnsignedInt(position);
+        position += 4;
 
-    return value;
-  }
-
-  /**
-   * Reads and returns an eight-byte long integer value from the current
-   * position.
-   **/
-  public long readLong() {
-    long value = dbPage.readLong(position);
-    position += 8;
-
-    return value;
-  }
-
-  public float readFloat() {
-    return Float.intBitsToFloat(readInt());
-  }
-
-  public double readDouble() {
-    return Double.longBitsToDouble(readLong());
-  }
+        return value;
+    }
 
 
-  /**
-   * This method reads and returns a variable-length string whose maximum length
-   * is 255 bytes.  The string is expected to be in US-ASCII encoding, so
-   * multibyte characters are not supported.
-   * <p>
-   * The string's data format is expected to be a single unsigned byte
-   * <em>b</em> specifying the string's length, followed by <em>b</em> more
-   * bytes consisting of the string value itself.
-   **/
-  public String readVarString255() {
-    String val = dbPage.readVarString255(position);
-    position += (1 + val.length());
-    return val;
-  }
+    /** Reads and returns a four-byte integer value from the current position. */
+    public int readInt() {
+        int value = dbPage.readInt(position);
+        position += 4;
+
+        return value;
+    }
+
+    /**
+     * Reads and returns an eight-byte long integer value from the current
+     * position.
+     */
+    public long readLong() {
+        long value = dbPage.readLong(position);
+        position += 8;
+
+        return value;
+    }
+
+    public float readFloat() {
+        return Float.intBitsToFloat(readInt());
+    }
+
+    public double readDouble() {
+        return Double.longBitsToDouble(readLong());
+    }
 
 
-  /**
-   * This method reads and returns a variable-length string whose maximum length
-   * is 65535 bytes.  The string is expected to be in US-ASCII encoding, so
-   * multibyte characters are not supported.
-   * <p>
-   * The string's data format is expected to be a single unsigned short (two
-   * bytes) <em>s</em> specifying the string's length, followed by <em>s</em>
-   * more bytes consisting of the string value itself.
-   **/
-  public String readVarString65535() {
-    String val = dbPage.readVarString65535(position);
-    position += (2 + val.length());
-    return val;
-  }
+    /**
+     * This method reads and returns a variable-length string whose maximum
+     * length is 255 bytes.  The string is expected to be in US-ASCII encoding,
+     * so multibyte characters are not supported.
+     * <p>
+     * The string's data format is expected to be a single unsigned byte
+     * <em>b</em> specifying the string's length, followed by <em>b</em> more
+     * bytes consisting of the string value itself.
+     */
+    public String readVarString255() {
+        String val = dbPage.readVarString255(position);
+        position += (1 + val.length());
+        return val;
+    }
+
+
+    /**
+     * This method reads and returns a variable-length string whose maximum
+     * length is 65535 bytes.  The string is expected to be in US-ASCII
+     * encoding, so multibyte characters are not supported.
+     * <p>
+     * The string's data format is expected to be a single unsigned short (two
+     * bytes) <em>s</em> specifying the string's length, followed by <em>s</em>
+     * more bytes consisting of the string value itself.
+     */
+    public String readVarString65535() {
+        String val = dbPage.readVarString65535(position);
+        position += (2 + val.length());
+        return val;
+    }
 
 
     /**

@@ -43,6 +43,7 @@ tokens {
   COMMIT      = "commit";
   CONSTRAINT  = "constraint";
   COUNT       = "count";
+  CRASH       = "crash";
   CREATE      = "create";
   CROSS       = "cross";
   DEFAULT     = "default";
@@ -170,7 +171,7 @@ command returns [Command c] { c = null; } :
   | c=select_stmt | c=insert_stmt | c=update_stmt | c=delete_stmt  // DML
   | c=begin_txn_stmt | c=commit_txn_stmt | c=rollback_txn_stmt     // Transactions
   | c=analyze_stmt | c=explain_stmt | c=exit_stmt                  // Utility
-  | c=verify_stmt | c=optimize_stmt                                // Utility
+  | c=verify_stmt | c=optimize_stmt | c=crash_stmt                 // Utility
   )
   ;
 
@@ -693,6 +694,14 @@ optimize_stmt returns [OptimizeCommand c]
   } :
   OPTIMIZE tblName=dbobj_ident { c = new OptimizeCommand(tblName); }
   ( COMMA tblName=dbobj_ident { c.addTable(tblName); } )*
+  ;
+
+
+/* CRASH Statements */
+
+crash_stmt returns [CrashCommand c]
+  { c = null; } :
+  CRASH { c = new CrashCommand(); }
   ;
 
 

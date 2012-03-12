@@ -102,8 +102,8 @@ public class ExclusiveClient {
 
                 if (cmd == null || cmd instanceof ExitCommand)
                     break;
-                else
-                    cmd.execute();
+
+                NanoDBServer.doCommand(cmd, false);
             }
             catch (RecognitionException e) {
                 System.out.println("Parser error:  " + e.getMessage());
@@ -113,26 +113,10 @@ public class ExclusiveClient {
                 System.out.println("Input stream error:  " + e.getMessage());
                 logger.error("Input stream error", e);
             }
-            catch(ExecutionException e) {
-                System.out.println("Execution error:  " + e.getMessage());
-                logger.error("Execution error", e);
+            catch (Exception e) {
+                System.out.println("Unexpected error:  " + e.getMessage());
+                logger.error("Unexpected error", e);
             }
-            catch (Throwable t) {
-                System.out.println("Unexpected error:  " + t.getMessage());
-                logger.error("Unexpected error", t);
-            }
-
-            // Persist all database changes.
-            /*
-            try {
-                StorageManager.getInstance().closeAllOpenTables();
-            }
-            catch (IOException e) {
-                System.out.println("IO error while closing open tables:  " +
-                    e.getMessage());
-                logger.error("IO error while closing open tables", e);
-            }
-            */
         }
 
         // Shut down the various database subsystems that require cleanup.

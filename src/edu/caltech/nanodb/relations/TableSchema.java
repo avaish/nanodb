@@ -178,6 +178,7 @@ public class TableSchema extends Schema {
                     "Column %s was specified multiple times", colName));
             }
             result[i] = getColumnIndex(columnNames.get(i));
+            i++;
         }
 
         return result;

@@ -24,8 +24,11 @@ public enum DBFileType {
     BTREE_INDEX_FILE(10),
 
 
-    /** Represents a checkpoint file used for crash-detection and recovery. */
-    CHECKPOINT_FILE(20),
+    /**
+     * Represents a transaction-state file used for write-ahead logging and
+     * recovery.
+     */
+    TXNSTATE_FILE(20),
 
     /**
      * Represents a write-ahead log file used for transaction processing and

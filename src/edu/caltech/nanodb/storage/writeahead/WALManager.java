@@ -276,8 +276,8 @@ public class WALManager {
         }
 
         if (currLSN.compareTo(recoveryInfo.nextLSN) != 0) {
-            throw new WALFileException("Traversing WAL file didn't yield " +
-                " the same ending LSN as in the transaction-state file.  WAL " +
+            throw new WALFileException("Traversing WAL file didn't yield" +
+                " the same ending LSN as in the transaction-state file.  WAL" +
                 " result:  " + currLSN + "  TxnState:  " + recoveryInfo.nextLSN);
         }
 
@@ -976,20 +976,31 @@ public class WALManager {
             logger.debug(String.format(
                 "Undoing WAL record at %s.  Type = %s, TxnID = %d",
                 lsn, type, transactionID));
-
-            // TODO:  IMPLEMENT THE REST
-            //
-            //        Use logging statements liberally to help verify and
-            //        debug your work.
-            //
-            //        If you encounter invalid WAL contents, throw a
-            //        WALFileException to indicate the problem immediately.
-            //
-            // TODO:  SET lsn TO PREVIOUS LSN TO WALK BACKWARD THROUGH WAL.
-
-            // This break is just here so the code will compile; when you
-            // provide your own implementation, get rid of it!
-            break;
+            
+            if (type.equals(WALRecordType.START_TXN)) {
+            	logger.debug("Finished rolling back transaction.");
+            	break;
+            }
+            
+            // EXCEPTIONS
+            
+            int prevLSNFile = walReader.readUnsignedShort();
+            int prevLSNOffset = walReader.readInt();
+            
+            String fileName = walReader.readVarString255();
+            int pageNo = walReader.readUnsignedShort();
+            
+            int numSegments = walReader.readUnsignedShort();
+            
+            DBPage page = storageManager.loadDBPage(storageManager.openDBFile(
+            	fileName), pageNo);
+            
+            byte[] changes = applyUndoAndGenRedoOnlyData(walReader, page, 
+            	numSegments);
+            
+            writeRedoOnlyUpdatePageRecord(page, numSegments, changes);
+            
+            lsn = new LogSequenceNumber(prevLSNFile, prevLSNOffset);
         }
 
         // All done rolling back the transaction!  Record that it was aborted

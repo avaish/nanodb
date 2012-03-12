@@ -328,7 +328,7 @@ public class BTreeIndexManager implements IndexManager {
                 pagePath.add(dbPage.getPageNo());
             }
             
-            // Insert new leaf node into 'linked list'.
+            // Obtain the inner page.
             InnerPage innerPage = new InnerPage(dbPage, idxFileInfo);
             int next_pointer = innerPage.getNumPointers() - 1;
             

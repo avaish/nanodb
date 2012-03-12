@@ -394,14 +394,14 @@ public class LeafPageOperations {
             parentPageNo = pagePath.get(pathSize - 2);
         
         if (parentPageNo != -1) {
-        	// Update parent inner page.
-        	InnerPageOperations ops = new InnerPageOperations(bTreeManager);
-        	ops.addEntry(new InnerPage(storageManager.loadDBPage(dbFile, 
-            	parentPageNo), idxFileInfo), pagePath.subList(0, pathSize - 1), 
-            	leaf.getPageNo(), newLeaf.getKey(0), newLeaf.getPageNo());
+            // Update parent inner page.
+            InnerPageOperations ops = new InnerPageOperations(bTreeManager);
+            ops.addEntry(new InnerPage(storageManager.loadDBPage(dbFile, 
+                parentPageNo), idxFileInfo), pagePath.subList(0, pathSize - 1), 
+                leaf.getPageNo(), newLeaf.getKey(0), newLeaf.getPageNo());
         }
         else {
-        	DBPage dbpParent = bTreeManager.getNewDataPage(dbFile);
+            DBPage dbpParent = bTreeManager.getNewDataPage(dbFile);
             InnerPage parent = InnerPage.init(dbpParent, idxFileInfo,
                 leaf.getPageNo(), newLeaf.getKey(0), newLeaf.getPageNo());
 

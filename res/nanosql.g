@@ -55,6 +55,7 @@ tokens {
   EXIT        = "exit";
   EXPLAIN     = "explain";
   FALSE       = "false";
+  FLUSH       = "flush";
   FOREIGN     = "foreign";
   FROM        = "from";
   FULL        = "full";
@@ -170,8 +171,8 @@ command returns [Command c] { c = null; } :
   ( c=create_stmt /* | alter_stmt */ | c=drop_stmt                 // DDL
   | c=select_stmt | c=insert_stmt | c=update_stmt | c=delete_stmt  // DML
   | c=begin_txn_stmt | c=commit_txn_stmt | c=rollback_txn_stmt     // Transactions
-  | c=analyze_stmt | c=explain_stmt | c=exit_stmt                  // Utility
-  | c=verify_stmt | c=optimize_stmt | c=crash_stmt                 // Utility
+  | c=analyze_stmt | c=explain_stmt | c=exit_stmt | c=verify_stmt  // Utility
+  | c=optimize_stmt | c=crash_stmt | c=flush_stmt                  // Utility
   )
   ;
 
@@ -702,6 +703,14 @@ optimize_stmt returns [OptimizeCommand c]
 crash_stmt returns [CrashCommand c]
   { c = null; } :
   CRASH { c = new CrashCommand(); }
+  ;
+
+
+/* FLUSH Statements */
+
+flush_stmt returns [FlushCommand c]
+  { c = null; } :
+  FLUSH { c = new FlushCommand(); }
   ;
 
 

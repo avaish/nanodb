@@ -56,7 +56,7 @@ public class DataPage {
      */
     public static void initNewPage(DBPage dbPage) throws IOException {
         setNumSlots(dbPage, 0);
-        setPointer(dbPage, dbPage.getDBFile().getNumPages() + 1);
+        setPointer(dbPage, dbPage.getDBFile().getNumPages());
     }
 
     

@@ -351,7 +351,14 @@ public class TransactionManager {
     /**
      * This method forces the write-ahead log out to at least the specified
      * log sequence number, syncing the log to ensure that all essential
-     * records have reached the disk itself.
+     * records have reached the disk itself. This method is both atomic and
+     * durable. It is atomic in the sense that the file that indicates that 
+     * this process has finished, txnstate.dat, is not updated until the entire
+     * process is done, and the update is updated atomically. So if the method
+     * ever ends unfinished, to the database it would seem that no work was
+     * done in the method. It is durable since as soon as the txnstate.dat file
+     * is updated, all the WAL data has already been synced to disk, so at that
+     * point even if there is a crash that data will remain.
      *
      * @param lsn All WAL data up to this value must be forced to disk and
      *        sync'd.  This value may be one past the end of the current WAL
@@ -363,31 +370,37 @@ public class TransactionManager {
      */
     public void forceWAL(LogSequenceNumber lsn) throws IOException {
         if (lsn.compareTo(txnStateNextLSN) <= 0)
-        	return;
+            return;
         
         logger.debug("Forcing WAL up to " + lsn);
         
         DBFile walFile;
+        // Writes and syncs dirty pages up to the file where lsn is on.
         for (int x = txnStateNextLSN.getLogFileNo(); x < lsn.getLogFileNo(); x++) {
-        	walFile = bufferManager.getFile(WALManager.getWALFileName(x));
-        	if (walFile != null) {
-        		bufferManager.writeDBFile(walFile, true);
-        		logger.debug("Synced " + walFile);
-        	}
+            walFile = bufferManager.getFile(WALManager.getWALFileName(x));
+            if (walFile != null) {
+                bufferManager.writeDBFile(walFile, true);
+                logger.debug("Synced " + walFile);
+            }
         }
+        // If our lsn actually contains a record, move up until past the record.
         if (lsn.getRecordSize() > 0) {
-        	lsn = new LogSequenceNumber(lsn.getLogFileNo(),
-        		lsn.getFileOffset() + lsn.getRecordSize());
+            lsn = new LogSequenceNumber(lsn.getLogFileNo(),
+                lsn.getFileOffset() + lsn.getRecordSize());
         }
         walFile = bufferManager.getFile(WALManager.getWALFileName(lsn.getLogFileNo()));
-        int endRecordOffset = lsn.getFileOffset(); // + lsn.getRecordSize();
+        
+        // Determine the end offset of the record, and then write up to the 
+        // containing page in the file.
+        int endRecordOffset = lsn.getFileOffset();
         bufferManager.writeDBFile(walFile, 0, 
-        	endRecordOffset / walFile.getPageSize(), true);
-		logger.debug("Synced " + walFile + " from pages 0 to" + 
-        	endRecordOffset / walFile.getPageSize());
+            endRecordOffset / walFile.getPageSize(), true);
+        logger.debug("Synced " + walFile + " from pages 0 to" + 
+            endRecordOffset / walFile.getPageSize());
         
+        // Update local value
         txnStateNextLSN = lsn;
-        
+        // Update disk value (atomic update)
         storeTxnStateToFile();
         
         logger.debug("Updated nextLSN on disk to " + txnStateNextLSN);

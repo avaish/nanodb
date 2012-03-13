@@ -520,7 +520,7 @@ public class HeapFileTableManager implements TableManager {
                     // the slot is empty, and we skip to the next slot.
                     int offset = DataPage.getSlotValue(dbPage, iSlot);
                     if (offset == DataPage.EMPTY_SLOT) {
-                    	storageManager.unpinDBPage(dbPage);
+                        storageManager.unpinDBPage(dbPage);
                         continue;
                     }
 
@@ -636,7 +636,7 @@ public class HeapFileTableManager implements TableManager {
 
             try {
                 DBPage nextDBPage = storageManager.loadDBPage(dbFile, 
-                	dbPage.getPageNo() + 1);
+                    dbPage.getPageNo() + 1);
                 storageManager.unpinDBPage(dbPage);
                 dbPage = nextDBPage;
                 nextSlot = 0;
@@ -644,7 +644,7 @@ public class HeapFileTableManager implements TableManager {
             catch (EOFException e) {
                 // Hit the end of the file with no more tuples.  We are done
                 // scanning.
-            	storageManager.unpinDBPage(dbPage);
+                storageManager.unpinDBPage(dbPage);
                 return null;
             }
         }

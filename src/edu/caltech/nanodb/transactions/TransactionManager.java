@@ -375,9 +375,12 @@ public class TransactionManager {
         		logger.debug("Synced " + walFile);
         	}
         }
-        
+        if (lsn.getRecordSize() > 0) {
+        	lsn = new LogSequenceNumber(lsn.getLogFileNo(),
+        		lsn.getFileOffset() + lsn.getRecordSize());
+        }
         walFile = bufferManager.getFile(WALManager.getWALFileName(lsn.getLogFileNo()));
-        int endRecordOffset = lsn.getFileOffset() + lsn.getRecordSize();
+        int endRecordOffset = lsn.getFileOffset(); // + lsn.getRecordSize();
         bufferManager.writeDBFile(walFile, 0, 
         	endRecordOffset / walFile.getPageSize(), true);
 		logger.debug("Synced " + walFile + " from pages 0 to" + 

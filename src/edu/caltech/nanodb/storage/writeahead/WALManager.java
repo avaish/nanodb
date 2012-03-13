@@ -298,6 +298,8 @@ public class WALManager {
             int logFileNo = currLSN.getLogFileNo();
             int fileOffset = currLSN.getFileOffset();
 
+            logger.debug("Finding record that comes before LSN " + currLSN);
+
             // Wrap to the previous WAL file if necessary, and if there is one.
             if (fileOffset == OFFSET_FIRST_RECORD) {
                 // Need to read the "previous WAL file's last offset" value
@@ -331,6 +333,8 @@ public class WALManager {
 
             if (oldLSN == null || oldLSN.getLogFileNo() != logFileNo)
                 walReader = getWALFileReader(currLSN);
+            else
+                walReader.setPosition(currLSN.getFileOffset());
 
             // Move backward one byte in the WAL file to read the previous
             // record's type ID.
@@ -344,14 +348,14 @@ public class WALManager {
             switch (type) {
             case START_TXN:
                 // Type (1B) + TransactionID (4B) + Type (1B) = 6 bytes
-                startOffset = fileOffset - 6 + 1;
+                startOffset = fileOffset - 6;
                 break;
 
             case COMMIT_TXN:
             case ABORT_TXN:
                 // Type (1B) + TransactionID (4B) + PrevLSN (2B+4B) + Type (1B)
                 // = 12 bytes
-                startOffset = fileOffset - 12 + 1;
+                startOffset = fileOffset - 12;
                 break;
 
             case UPDATE_PAGE:
@@ -377,6 +381,8 @@ public class WALManager {
             currLSN = new LogSequenceNumber(logFileNo, startOffset);
             if (currLSN.compareTo(recoveryInfo.firstLSN) < 0)
                 break;
+
+            walReader.setPosition(startOffset);
 
             // Read the transaction ID.
             int transactionID = walReader.readInt();
@@ -757,6 +763,7 @@ public class WALManager {
         // Store the LSN of the change on the page.
         lsn.setRecordSize(walWriter.getPosition() - lsn.getFileOffset());
         dbPage.setPageLSN(lsn);
+        dbPage.syncOldPageData();
 
         txnState.setLastLSN(lsn);
 
@@ -908,6 +915,7 @@ public class WALManager {
         // Store the LSN of the change on the page.
         lsn.setRecordSize(walWriter.getPosition() - lsn.getFileOffset());
         dbPage.setPageLSN(lsn);
+        dbPage.syncOldPageData();
 
         nextLSN = computeNextLSN(nextLSN.getLogFileNo(), walWriter.getPosition());
 

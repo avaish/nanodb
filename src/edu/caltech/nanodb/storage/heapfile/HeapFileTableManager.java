@@ -644,6 +644,7 @@ public class HeapFileTableManager implements TableManager {
             catch (EOFException e) {
                 // Hit the end of the file with no more tuples.  We are done
                 // scanning.
+            	storageManager.unpinDBPage(dbPage);
                 return null;
             }
         }

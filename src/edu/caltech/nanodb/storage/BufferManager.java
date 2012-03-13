@@ -501,10 +501,13 @@ public class BufferManager {
                     // We don't log changes to these files.
                     continue;
                 }
-                
+
                 LogSequenceNumber pageLSN = dbPage.getPageLSN();
-                if (maxLSN == null || pageLSN.compareTo(maxLSN) > 0)
-                    maxLSN = pageLSN;
+                if (pageLSN != null) {
+                    if (maxLSN == null || pageLSN.compareTo(maxLSN) > 0)
+                        maxLSN = pageLSN;
+                }
+                // TODO:  Maybe should log that the page doesn't have a LSN.
             }
 
             if (maxLSN != null) {

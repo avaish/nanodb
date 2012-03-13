@@ -478,6 +478,11 @@ public class StorageManager {
     }
 
 
+    public void flushAllData() throws IOException {
+        bufferManager.writeAll(false);
+    }
+
+
     /*========================================================================
      * CODE RELATED TO TABLE FILES
      */
